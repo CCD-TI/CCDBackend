@@ -215,6 +215,12 @@ const emailRateLimiter4 = rateLimit({
 });
 
 const router = Router();
+router.get('/healty', (req: any, res: any) => {
+    res.json({
+        ok: true,
+        msg: 'Todo esta bien!!'
+    })
+})
 router.post('/listarSubCategoriaxCategoria', listarSubCategoriaxCategoria)
 router.get('/listarProductoBusqueda', listarProductoBusqueda)
 router.get('/listarProductoBusquedaCatalogo', listarProductoBusquedaCatalogo)
