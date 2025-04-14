@@ -221,6 +221,7 @@ router.get('/healty', (req: any, res: any) => {
         msg: 'Todo esta bien!!'
     })
 })
+router.post('/getcursoHome', getcursoHome)
 router.post('/listarSubCategoriaxCategoria', listarSubCategoriaxCategoria)
 router.get('/listarProductoBusqueda', listarProductoBusqueda)
 router.get('/listarProductoBusquedaCatalogo', listarProductoBusquedaCatalogo)
@@ -968,7 +969,7 @@ router.post('/escuelagetcursodetalle', escuelagetcursodetalle)
 router.post('/getcursosfull', getcursosfull)
 router.post('/getcursosav', getcursosav)
 router.post('/getcursoescuelaespecializacion', getcursoescuelaespecializacion)
-router.post('/getcursoHome', getcursoHome)
+
 router.post('/asignarcursoadminv2', asignarcursoadminv2)
 
 router.post('/vercursosespecializacionescuela', vercursosespecializacionescuela)
