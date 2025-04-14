@@ -187,7 +187,7 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DATE } from 'sequelize';
 import { NOW } from 'sequelize';
 import { GuardarDatosExamen, listarcertificadosxusuario, listarcursosplataformaxusuario, listarevaluacionesxusuario, listarpreguntasxusuario } from '../controllers/plataforma/cursos';
-import { asignarxpago, getRutas, getRutasDetalle, listaespecializacion, listaespecializacionGeneral, vercursosespecializacionescuela, vercursosespecializacionGeneral } from '../controllers/inicio/curso';
+import { asignarxpago, getcursoHome, getRutas, getRutasDetalle, listaespecializacion, listaespecializacionGeneral, vercursosespecializacionescuela, vercursosespecializacionGeneral } from '../controllers/inicio/curso';
 import { actualizarEntidad, buscarCursosPorPalabra, escuelagetcursodetalle, frontgetcursodetalle, getcursodetalle, getcursoescuelaespecializacion, getcursosav, getcursosfull, getescuela } from '../controllers/inicio/curso';
 
 const rateLimit = require('express-rate-limit');
@@ -968,6 +968,7 @@ router.post('/escuelagetcursodetalle', escuelagetcursodetalle)
 router.post('/getcursosfull', getcursosfull)
 router.post('/getcursosav', getcursosav)
 router.post('/getcursoescuelaespecializacion', getcursoescuelaespecializacion)
+router.post('/getcursoHome', getcursoHome)
 router.post('/asignarcursoadminv2', asignarcursoadminv2)
 
 router.post('/vercursosespecializacionescuela', vercursosespecializacionescuela)

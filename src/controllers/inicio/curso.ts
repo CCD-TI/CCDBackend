@@ -598,11 +598,16 @@ export const frontgetcursodetalleescuela = async (
   }
 };
 
+
+
+
+
+
 export const getcursoescuelaespecializacion = async (
   req = request,
   res = response
 ) => {
-  const { Escuela, Especializacion } = req.body;
+  const { Escuela, Especializacion} = req.body;
 
 
 
@@ -666,7 +671,11 @@ INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalid
 LEFT JOIN "Sala" "sal" ON "sal"."Producto_id" = "pro"."IdProducto"
 LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
 LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
-WHERE "esc"."Escuela" = :Escuela AND "esp"."Especializacion" = :Especializacion AND "pro"."Estado_id" = '1' AND "cur"."Estado_id" = '1'
+WHERE 
+"esc"."Escuela" = :Escuela AND 
+"esp"."Especializacion" = :Especializacion AND 
+"pro"."Estado_id" = '1' AND 
+"cur"."Estado_id" = '1' 
 GROUP BY
   "esc"."Escuela",
   "esp"."Especializacion",
@@ -677,13 +686,13 @@ GROUP BY
 
   try {
     const [result] = await db.query(sql, {
-      replacements: { Escuela, Especializacion },
+      replacements: { Escuela, Especializacion  },
     });
 
     if (!result || result.length === 0) {
       return res.status(404).json({
         ok: false,
-        msg: "Curso no encontrado",
+        msg: "Curso no encontradoss",
       });
     }
 
@@ -699,6 +708,120 @@ GROUP BY
     });
   }
 };
+
+
+export const getcursoHome = async (
+  req = request,
+  res = response
+) => {
+  const {SearchTerm ,Escuela } = req.body;
+
+
+
+  const sql = `
+
+  SELECT 
+  JSON_AGG(
+    JSON_BUILD_OBJECT(
+      'TipoModalidad', "tmo"."TipoModalidad",
+      'IdProducto', "pro"."IdProducto",
+      'Precio', "ppr"."Precio",
+      'FechaInicio', 
+        TO_CHAR("sal"."FechaInicio", 'DD') || ' de ' || 
+        CASE 
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '01' THEN 'Enero'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '02' THEN 'Febrero'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '03' THEN 'Marzo'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '04' THEN 'Abril'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '05' THEN 'Mayo'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '06' THEN 'Junio'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '07' THEN 'Julio'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '08' THEN 'Agosto'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '09' THEN 'Septiembre'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '10' THEN 'Octubre'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '11' THEN 'Noviembre'
+          WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '12' THEN 'Diciembre'
+        END,
+        'Horario', "sal"."Horario"
+    )
+  ) AS "Productos",
+  MAX(pat."Descripcion") AS "Descripcion",
+  MAX(pat."Calificacion") AS "Calificacion",
+  MAX(pat."Seguidores") AS "Seguidores",
+  MAX(pat."Nivel") AS "Nivel",
+  MAX(pat."MarcasRespaldo") AS "MarcasRespaldo",
+  MAX(pat."ExamenParcial") AS "ExamenParcial",
+  MAX(pat."ExamenFinal") AS "ExamenFinal",
+  MAX(pat."Profesores") AS "Profesores",
+  MAX(pat."Frecuencia") AS "Frecuencia",
+  MAX(pat."HorasAcademicas") AS "HorasAcademicas",
+  MAX(pat."Estado_id") AS "Estado_id",
+  MAX(pat."UltimaFechMod") AS "UltimaFechMod",
+  MAX(pat."NumeroWhatsapp") AS "NumeroWhatsapp",
+  "esc"."Escuela" AS "Escuela",
+  "esp"."Especializacion" AS "Especializacion",
+  "cur"."IdCurso" AS "IdCurso",
+  "cur"."Curso" AS "Curso",
+  "tpo"."TipoCurso" AS "TipoCurso",
+  (SELECT 
+      JSON_AGG(CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo"))
+    FROM "ProductoAdjunto" "pad"
+    WHERE "pad"."Curso_id" = "cur"."IdCurso"
+  ) AS "RutaImagen",
+  (SELECT COUNT(*) FROM "ProductoTemario" WHERE "Curso_id" = "cur"."IdCurso") AS "CantidadModulos"
+FROM "Producto" "pro"
+INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
+INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
+INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
+INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
+INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
+LEFT JOIN "Sala" "sal" ON "sal"."Producto_id" = "pro"."IdProducto"
+LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
+LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
+WHERE 
+"esc"."Escuela" = :Escuela AND 
+"pro"."Estado_id" = '1' AND 
+"cur"."Estado_id" = '1' AND
+"cur"."Curso" ILIKE '%' || :SearchTerm || '%'
+GROUP BY
+  "esc"."Escuela",
+  "esp"."Especializacion",
+  "cur"."IdCurso",
+  "cur"."Curso",
+  "tpo"."TipoCurso";
+    `;
+
+  try {
+    const [result] = await db.query(sql, {
+      replacements: { SearchTerm,Escuela },
+    });
+
+    if (!result || result.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Curso no encontradoss",
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      data: result,
+    });
+  } catch (err: any) {
+    console.error("Error en la consulta SQL:", err.message);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al buscar el curso",
+    });
+  }
+};
+
+
+
+
+
+
+
 
 export const buscarCursosPorPalabra = async (req = request, res = response) => {
   const { Palabra, Escuela, T1, T2, T4 } = req.body;
