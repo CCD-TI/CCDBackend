@@ -710,7 +710,9 @@ GROUP BY
 };
 
 
-export const getcursoHome = async (
+
+
+export const getcursoHome  = async (
   req = request,
   res = response
 ) => {
