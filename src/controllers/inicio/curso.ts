@@ -602,12 +602,11 @@ export const frontgetcursodetalleescuela = async (
 
 
 
-
 export const getcursoescuelaespecializacion = async (
   req = request,
   res = response
 ) => {
-  const { Escuela, Especializacion} = req.body;
+  const { Escuela } = req.body;
 
 
 
@@ -672,11 +671,7 @@ INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalid
 LEFT JOIN "Sala" "sal" ON "sal"."Producto_id" = "pro"."IdProducto"
 LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
 LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
-WHERE 
-"esc"."Escuela" = :Escuela AND 
-"esp"."Especializacion" = :Especializacion AND 
-"pro"."Estado_id" = '1' AND 
-"cur"."Estado_id" = '1' 
+WHERE "esc"."Escuela" = :Escuela  AND "pro"."Estado_id" = '1' AND "cur"."Estado_id" = '1'
 GROUP BY
   "esc"."Escuela",
   "esp"."Especializacion",
@@ -687,13 +682,13 @@ GROUP BY
 
   try {
     const [result] = await db.query(sql, {
-      replacements: { Escuela, Especializacion  },
+      replacements: { Escuela },
     });
 
     if (!result || result.length === 0) {
       return res.status(404).json({
         ok: false,
-        msg: "Curso no encontradoss",
+        msg: "Curso no encontrado",
       });
     }
 
@@ -709,6 +704,7 @@ GROUP BY
     });
   }
 };
+
 export const getcursoHome = async (
   req = request,
   res = response
@@ -918,7 +914,7 @@ export const vercursosespecializacionescuela = async (
   req = request,
   res = response
 ) => {
-  const { Escuela, T1, T2, T4 } = req.body;
+  const { Escuela, T1, T2, T3, T4 } = req.body;
 
 
   const sql = `
@@ -960,7 +956,7 @@ export const vercursosespecializacionescuela = async (
       LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
       LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
       LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
-      WHERE "esc"."Escuela" = :Escuela AND "pad"."Tipo1" = :T1 AND "pad"."Tipo2" = :T2 AND "pad"."Tipo4" = :T4 AND "pro"."Estado_id" = '1' AND "cur"."Estado_id" = '1'
+      WHERE "esc"."Escuela" = :Escuela AND "pad"."Tipo1" = :T1 AND "pad"."Tipo2" = :T2 AND   "pad"."Tipo3" = :T3 AND  "pad"."Tipo4" = :T4 AND "pro"."Estado_id" = '1' AND "cur"."Estado_id" = '1'
       GROUP BY 
         "esc"."Escuela",
         "esp"."Especializacion",
@@ -976,7 +972,7 @@ export const vercursosespecializacionescuela = async (
 
   try {
     const data = await db.query(sql, {
-      replacements: { Escuela, T1, T2, T4 }, // Reemplazamos las variables con valores dinámicos.
+      replacements: { Escuela, T1, T2,T3, T4 }, // Reemplazamos las variables con valores dinámicos.
     });
     return res.status(200).json({
       ok: true,

@@ -1613,19 +1613,17 @@ export const listarTemario = async (req = request, res = response) => {
     const { fproductoid } = req.body;
     // Ajusta la consulta SQL a tus necesidades
     const sql = `
-  SELECT
-    pt."Curso_id",
-    pt."IdProductoTemario" AS id,
-    pt."ProductoTemario" AS nombre,
-    pt."Numeracion" AS Numeracion,
-    jsonb_agg(
-        DISTINCT jsonb_build_object(
+
+SELECT
+        pt."Curso_id",
+        pt."IdProductoTemario" AS id,
+        pt."ProductoTemario" AS nombre,
+        pt."Numeracion",   
+        jsonb_agg(DISTINCT jsonb_build_object(
             'nombre', ptc."ProductoTemarioContenido",
             'tiempo', ptc."Duracion"
-        )
-    ) AS temas,
-    jsonb_agg(
-        DISTINCT jsonb_build_object(
+        )) AS temas,
+        jsonb_agg(DISTINCT jsonb_build_object(
             'ruta', CONCAT(
                 '/', COALESCE(pta."Tipo1", ''), 
                 '/', COALESCE(pta."Tipo2", ''), 
@@ -1634,31 +1632,24 @@ export const listarTemario = async (req = request, res = response) => {
                 '/', COALESCE(pta."NombreArchivo", '')
             ),
             'tipo', pta."Tipo2",
-            'nombre', pta."NombreArchivo"
-        )
-    ) AS adjuntos,
-    string_agg(
-        DISTINCT CONCAT(
-            '/', COALESCE(pta."Tipo1", ''), 
-            '/', COALESCE(pta."Tipo2", ''), 
-            '/', COALESCE(pta."Tipo3", ''), 
-            '/', COALESCE(pta."Tipo4", ''), 
-            '/', COALESCE(pta."NombreArchivo", '')
-        ),
-        ', '
-    ) FILTER (WHERE pta."Tipo2" = 'Video' and pta."Tipo4"='ModulosFinal') AS rutas_videos
-FROM "Producto" pro
-INNER JOIN "Curso" cur ON cur."IdCurso" = pro."Curso_id"
-INNER JOIN "ProductoTemario" pt ON pt."Curso_id" = cur."IdCurso"
-LEFT JOIN "ProductoTemarioContenido" ptc ON pt."IdProductoTemario" = ptc."ProductoTemario_id"
-LEFT JOIN "ProductoTemarioAdjunto" pta ON pta."ProductoTemario_id" = pt."IdProductoTemario"
-WHERE cur."IdCurso" =(select "Curso_id" from "Producto" where "IdProducto"=${fproductoid}) and pta."Sala_id" is null
-GROUP BY
-    pt."Curso_id",
-    pt."IdProductoTemario",
-    pt."ProductoTemario",
-    pt."Numeracion"
-ORDER BY pt."IdProductoTemario" ASC;
+            'nombre', pta."NombreFinal",
+            'orden', pta."Orden"
+        )) AS adjuntos
+    FROM "ProductoTemario" pt
+    LEFT JOIN "ProductoTemarioContenido" ptc 
+        ON pt."IdProductoTemario" = ptc."ProductoTemario_id"
+    LEFT JOIN "ProductoTemarioAdjunto" pta 
+        ON pt."IdProductoTemario" = pta."ProductoTemario_id"
+        AND pta."Sala_id" is null
+        AND pta."Tipo4" = 'ModulosFinal'
+    WHERE pt."Curso_id" = (
+        SELECT "Curso_id" FROM "Producto" WHERE "IdProducto" = ${fproductoid}
+    )
+    GROUP BY
+        pt."Curso_id",
+        pt."IdProductoTemario",
+        pt."ProductoTemario",
+        pt."Numeracion"
  `;
 
     try {
@@ -1690,52 +1681,44 @@ export const listarTemarioVivov2 = async (req = request, res = response) => {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql1, {});
         const sql = `
+
         SELECT
-          pt."Curso_id",
-          pt."IdProductoTemario" AS id,
-          pt."ProductoTemario" AS nombre,
-          pt."Numeracion" AS Numeracion,
-          jsonb_agg(
-              DISTINCT jsonb_build_object(
-                  'nombre', ptc."ProductoTemarioContenido",
-                  'tiempo', ptc."Duracion"
-              )
-          ) AS temas,
-          jsonb_agg(
-              DISTINCT jsonb_build_object(
-                  'ruta', CONCAT(
-                      '/', COALESCE(pta."Tipo1", ''), 
-                      '/', COALESCE(pta."Tipo2", ''), 
-                      '/', COALESCE(pta."Tipo3", ''), 
-                      '/', COALESCE(pta."Tipo4", ''), 
-                      '/', COALESCE(pta."NombreArchivo", '')
-                  ),
-                  'tipo', pta."Tipo2",
-                  'nombre', pta."NombreArchivo"
-              )
-          ) AS adjuntos,
-          string_agg(
-              DISTINCT CONCAT(
-                  '/', COALESCE(pta."Tipo1", ''), 
-                  '/', COALESCE(pta."Tipo2", ''), 
-                  '/', COALESCE(pta."Tipo3", ''), 
-                  '/', COALESCE(pta."Tipo4", ''), 
-                  '/', COALESCE(pta."NombreArchivo", '')
-              ),
-              ', '
-          ) FILTER (WHERE pta."Tipo2" = 'Video' and pta."Tipo4"='ModulosVivo' and pta."Sala_id"='${data[0][0].IdSala}') AS rutas_videos
-      FROM "Producto" pro
-      INNER JOIN "Curso" cur ON cur."IdCurso" = pro."Curso_id"
-      INNER JOIN "ProductoTemario" pt ON pt."Curso_id" = cur."IdCurso"
-      LEFT JOIN "ProductoTemarioContenido" ptc ON pt."IdProductoTemario" = ptc."ProductoTemario_id"
-      LEFT JOIN "ProductoTemarioAdjunto" pta ON pta."ProductoTemario_id" = pt."IdProductoTemario"
-      WHERE cur."IdCurso" =(select "Curso_id" from "Producto" where "IdProducto"=${fproductoid})
-      GROUP BY
-          pt."Curso_id",
-          pt."IdProductoTemario",
-          pt."ProductoTemario",
-          pt."Numeracion"
-      ORDER BY pt."IdProductoTemario" ASC;
+        pt."Curso_id",
+        pt."IdProductoTemario" AS id,
+        pt."ProductoTemario" AS nombre,
+        pt."Numeracion",   
+        jsonb_agg(DISTINCT jsonb_build_object(
+            'nombre', ptc."ProductoTemarioContenido",
+            'tiempo', ptc."Duracion"
+        )) AS temas,
+        jsonb_agg(DISTINCT jsonb_build_object(
+            'ruta', CONCAT(
+                '/', COALESCE(pta."Tipo1", ''), 
+                '/', COALESCE(pta."Tipo2", ''), 
+                '/', COALESCE(pta."Tipo3", ''), 
+                '/', COALESCE(pta."Tipo4", ''), 
+                '/', COALESCE(pta."NombreArchivo", '')
+            ),
+            'tipo', pta."Tipo2",
+            'nombre', pta."NombreFinal",
+            'orden', pta."Orden"
+        )) AS adjuntos
+    FROM "ProductoTemario" pt
+    LEFT JOIN "ProductoTemarioContenido" ptc 
+        ON pt."IdProductoTemario" = ptc."ProductoTemario_id"
+    LEFT JOIN "ProductoTemarioAdjunto" pta 
+        ON pt."IdProductoTemario" = pta."ProductoTemario_id"
+        AND pta."Sala_id" = ${data[0][0].IdSala}
+        AND pta."Tipo4" = 'ModulosVivo'
+    WHERE pt."Curso_id" = (
+        SELECT "Curso_id" FROM "Producto" WHERE "IdProducto" = ${fproductoid}
+    )
+    GROUP BY
+        pt."Curso_id",
+        pt."IdProductoTemario",
+        pt."ProductoTemario",
+        pt."Numeracion"
+
        `;
         const data1: any = await db.query(sql, {});
 
@@ -3667,7 +3650,7 @@ export const listarcursoxusuariov2 = async (req = request, res = response) => {
     INNER JOIN "ProductoStock" "pst" ON "pst"."Producto_id" = "pro"."IdProducto"
     INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
     LEFT JOIN "Sala" "sa" ON "sa"."Producto_id" = "pro"."IdProducto"
-    WHERE "pst"."Usuario_id" = ${fusuario_id} and pad."Tipo4"='PortadaFinal'
+    WHERE "pst"."Usuario_id" = ${fusuario_id} and pad."Tipo4"='PortadaFinalEGP'
     GROUP BY
         "Escuela",
         "Especializacion",
@@ -5963,12 +5946,12 @@ export const listarplanv2 = async (
     `;
 
     try {
-        const data = await db.query(sql, {
-        });
+        const data = await db.query(sql, {});
+        
 
         return res.status(200).json({
             ok: true,
-            msg: "Especializaciones obtenidas correctamente",
+            msg: "Planes obtenidos correctamente",
             data: data,
         });
     } catch (err) {
@@ -8317,3 +8300,66 @@ export const guardarnotasalumnosv2 = async (req = request, res = response) => {
         });
     }
 };
+
+
+
+// Nuevos Endpoints  
+
+export const VerificarCodePromo = async (req = request, res = response) => {
+    const { Code, user } = req.body;  // Obtener el código del cupón y el nombre del usuario
+
+    // Validar que el código y el usuario estén presentes
+    if (!Code || !user) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'El código y el usuario son requeridos.',
+        });
+    }
+
+    try {
+        // Verificar si el cupón existe para el usuario y está activo
+        const consultaVerificacion = `
+            SELECT code, discount, Usuario, estado_id 
+            FROM coupons
+            WHERE code = '${Code}' AND Usuario = '${user}' AND estado_id = 1;
+        `;
+
+        const resultadoVerificacion = await db.query(consultaVerificacion);
+
+        // Verificar si el cupón fue encontrado
+        if (!resultadoVerificacion[0] || resultadoVerificacion[0].length === 0) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'El código no es válido para este usuario o ya fue usado.',
+            });
+        }
+
+        // Obtener el descuento del cupón
+        const coupon = resultadoVerificacion[0][0];  // Acceder al primer (y único) registro de la consulta
+
+        // Paso 2: Actualizar el estado del cupón a inactivo (estado_id = 0) y registrar el usuario
+        const consultaActualizacion = `
+            UPDATE coupons
+            SET estado_id = 0, ultima_fech_mod = CURRENT_TIMESTAMP, ultimo_user_mod = '${user}'
+            WHERE code = '${Code}' AND Usuario = '${user}' AND estado_id = 1;
+        `;
+
+        await db.query(consultaActualizacion);
+
+        // Respuesta exitosa si se actualizó el cupón
+        return res.status(200).json({
+            ok: true,
+            msg: 'Código válido. El cupón ha sido aplicado correctamente.',
+            coupon,  // Retornar el descuento y el código
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            ok: false,
+            msg: 'Error al verificar el cupón.',
+        });
+    }
+};
+
+

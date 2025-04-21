@@ -179,7 +179,8 @@ import {
     vercertificadosv2,
     listarnotasalumnosv2,
     guardarnotasalumnosv2,
-    vercertificadosxcodigov2
+    vercertificadosxcodigov2,
+    VerificarCodePromo
 } from '../controllers/inicio/producto';
 
 
@@ -952,6 +953,8 @@ router.post('/loginUsuario', loginUsuario)
 router.post('/verificarCode',verificarCode)
 router.post('/actualizarClaveTemporal',emailRateLimiter4,actualizarClaveTemporal)
 router.post('/updatePassword',updatePassword)
+
+router.post('/VerificarCodePromo', VerificarCodePromo)
 //
 
 router.post('/vercursosplataformatiendaxtopv2', vercursosplataformatiendaxtopv2)

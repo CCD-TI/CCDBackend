@@ -72,7 +72,6 @@ class Server {
     this.app.use(this.paths.auth, authRouth);
     this.app.use(this.paths.pago, pagoRouth);
     this.app.use(this.paths.storage, storageRouth);
-    this.app.get("/getCursoHome", getcursoHome)
   }
   //Conexion a la base de datos
   async dbConnect() {
