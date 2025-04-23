@@ -1610,7 +1610,7 @@ export const listarDocentes = async (req = request, res = response) => {
 };
 
 export const listarTemario = async (req = request, res = response) => {
-    const { fproductoid } = req.body;
+    const { fproductoid,shanty } = req.body;
     // Ajusta la consulta SQL a tus necesidades
     const sql = `
 
@@ -1641,7 +1641,7 @@ SELECT
     LEFT JOIN "ProductoTemarioAdjunto" pta 
         ON pt."IdProductoTemario" = pta."ProductoTemario_id"
         AND pta."Sala_id" is null
-        AND pta."Tipo4" = 'ModulosFinal'
+        AND pta."Tipo4" = '${shanty}'
     WHERE pt."Curso_id" = (
         SELECT "Curso_id" FROM "Producto" WHERE "IdProducto" = ${fproductoid}
     )
@@ -3639,6 +3639,7 @@ export const listarcursoxusuariov2 = async (req = request, res = response) => {
         "IdCurso",
         "Curso",
         "TipoCurso",
+        "cur"."CodigoCurso",
         "pro"."IdProducto"
     FROM "Producto" "pro"
     INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
@@ -3657,6 +3658,7 @@ export const listarcursoxusuariov2 = async (req = request, res = response) => {
         "IdCurso",
         "Curso",
         "TipoCurso",
+        "cur"."CodigoCurso",
         "pro"."IdProducto",
         pad."Tipo1",
         pad."Tipo2",
@@ -4740,21 +4742,14 @@ export const ObtenerEspe = async (req = request, res = response) => {
     const { school } = req.body; // Obtener el valor de "school" desde el cuerpo de la solicitud
 
     // Asegurarse de que "school" se haya enviado en la solicitud
-    if (!school) {
-        return res.status(400).json({
-            ok: false,
-            msg: "El parámetro 'school' es obligatorio.",
-        });
-    }
+   
 
     const sql = `
-      SELECT "IdEspecializacion", "Especializacion"
-      FROM "Especializacion"
-      WHERE "Escuela_id" = ${school}
-    `;
+  select "Curso" , "IdCurso" from "Curso" LIMIT 10
+  `;
 
     try {
-        const data = await db.query(sql, { replacements: [school] }); // Ejecutamos la consulta directamente
+        const data = await db.query(sql); // Ejecutamos la consulta directamente
 
         // Devolvemos los resultados directamente, sin necesidad de acceder a data.rows
         return res.status(200).json({
@@ -6415,7 +6410,7 @@ export const listarinputlayoutv2 = async (
     const sql = `
       	select "Curso", CONCAT('/',"pa"."Tipo1",'/',"pa"."Tipo2",'/',"pa"."Tipo3",'/',"pa"."Tipo4",'/',"pa"."NombreArchivo" ) as "RutaImagen" from "Curso" cur
 	inner join "ProductoAdjunto" pa on pa."Curso_id"=cur."IdCurso" 
-	where "Tipo4"='PortadaFinal'
+	where "Tipo4"='PortadaFinalEGP'
     `;
 
     try {

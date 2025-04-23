@@ -1315,40 +1315,33 @@ export const asignarrutaadmin = async (req = request, res = response) => {
   }
 };
 
-export const ObtenerEspe = async (req = request, res = response) => {
-  const { school } = req.body; // Obtener el valor de "school" desde el cuerpo de la solicitud
+// export const ObtenerEspe = async (req = request, res = response) => {
+  
 
-  // Asegurarse de que "school" se haya enviado en la solicitud
-  if (!school) {
-    return res.status(400).json({
-      ok: false,
-      msg: "El parámetro 'school' es obligatorio.",
-    });
-  }
+//   // Asegurarse de que "school" se haya enviado en la solicitud
+ 
 
-  const sql = `
-    SELECT "IdEspecializacion", "Especializacion"
-    FROM "Especializacion"
-    WHERE "Escuela_id" = ${school}
-  `;
+//   const sql = `
+//    select "Curso" from "Curso"
+//   `;
 
-  try {
-    const data = await db.query(sql, { replacements: [school] }); // Ejecutamos la consulta directamente
+//   try {
+//     const data = await db.query(sql); // Ejecutamos la consulta directamente
 
-    // Devolvemos los resultados directamente, sin necesidad de acceder a data.rows
-    return res.status(200).json({
-      ok: true,
-      msg: "Información recibida correctamente",
-      data: data, // Devolvemos los resultados directamente
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(400).json({
-      ok: false,
-      msg: "Error al obtener los datos.",
-    });
-  }
-};
+//     // Devolvemos los resultados directamente, sin necesidad de acceder a data.rows
+//     return res.status(200).json({
+//       ok: true,
+//       msg: "Información recibida correctamente",
+//       data: data, // Devolvemos los resultados directamente
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     return res.status(400).json({
+//       ok: false,
+//       msg: "Error al obtener los datos.",
+//     });
+//   }
+// };
 
 export const asignarxpago = async (req = request, res = response) => {
   const { fproducto_id, fruta_id, fusuario_id, fprecio } = req.body;
