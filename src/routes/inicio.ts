@@ -180,7 +180,12 @@ import {
     listarnotasalumnosv2,
     guardarnotasalumnosv2,
     vercertificadosxcodigov2,
-    VerificarCodePromo
+    VerificarCodePromo,
+    CompraMembresias,
+    CompraMembresiasProfesional,
+    CompraMembresiasPremium,
+    ExtenderMembresia,
+    UsuariosData
 } from '../controllers/inicio/producto';
 
 
@@ -188,8 +193,10 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DATE } from 'sequelize';
 import { NOW } from 'sequelize';
 import { GuardarDatosExamen, listarcertificadosxusuario, listarcursosplataformaxusuario, listarevaluacionesxusuario, listarpreguntasxusuario } from '../controllers/plataforma/cursos';
-import { asignarxpago, getcursoHome, getRutas, getRutasDetalle, listaespecializacion, listaespecializacionGeneral, vercursosespecializacionescuela, vercursosespecializacionGeneral } from '../controllers/inicio/curso';
+import { asignarxpago, getcursoHome, getcursoProfesional, getcursosavCarrusel, getRutas, getRutasDetalle, listaespecializacion, listaespecializacionGeneral, vercursosespecializacionescuela, vercursosespecializacionGeneral } from '../controllers/inicio/curso';
 import { actualizarEntidad, buscarCursosPorPalabra, escuelagetcursodetalle, frontgetcursodetalle, getcursodetalle, getcursoescuelaespecializacion, getcursosav, getcursosfull, getescuela } from '../controllers/inicio/curso';
+import Cron from '../controllers/cron/Cron';
+import { ObtenerFechaMembresia } from '../controllers/cron/Membresia';
 
 const rateLimit = require('express-rate-limit');
 
@@ -953,9 +960,29 @@ router.post('/loginUsuario', loginUsuario)
 router.post('/verificarCode',verificarCode)
 router.post('/actualizarClaveTemporal',emailRateLimiter4,actualizarClaveTemporal)
 router.post('/updatePassword',updatePassword)
-
 router.post('/VerificarCodePromo', VerificarCodePromo)
-//
+
+/// Endpoints para la compra de Membresias
+ 
+
+router.post('/CompraMembresias',CompraMembresias)
+router.post('/CompraMembresiasProfesional',CompraMembresiasProfesional)
+router.post('/CompraMembresiasPremium',CompraMembresiasPremium)
+router.post('/ExtenderMembresia',ExtenderMembresia)
+
+router.post('/getcursoProfesional', getcursoProfesional)
+router.post('/getcursosavCarrusel', getcursosavCarrusel)
+
+/// Pruebas cron
+
+router.post('/Cron', Cron)
+router.post('/ObtenerFechaMembresia', ObtenerFechaMembresia)
+
+
+//endpoint Usuarios
+
+router.post('/UsuariosData', UsuariosData)
+
 
 router.post('/vercursosplataformatiendaxtopv2', vercursosplataformatiendaxtopv2)
 

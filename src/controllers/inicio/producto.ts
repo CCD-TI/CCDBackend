@@ -6,6 +6,7 @@ import path from 'path';
 import db from "../../db/connection";
 import ExcelJS from "exceljs";
 import { QueryTypes } from "sequelize";
+import dayjs from "dayjs";
 
 const nodemailer = require("nodemailer");
 import {
@@ -16,7 +17,9 @@ import {
 } from "../../utils/validations";
 import { KJUR } from "jsrsasign";
 
-
+interface RegistroVentaResult {
+    IdRegistroVenta: number;
+}
 
 export const loginUsuario = async (req = request, res = response) => {
     const { pUsuario, pClave } = req.body;
@@ -1610,7 +1613,7 @@ export const listarDocentes = async (req = request, res = response) => {
 };
 
 export const listarTemario = async (req = request, res = response) => {
-    const { fproductoid,shanty } = req.body;
+    const { fproductoid, shanty } = req.body;
     // Ajusta la consulta SQL a tus necesidades
     const sql = `
 
@@ -4742,7 +4745,7 @@ export const ObtenerEspe = async (req = request, res = response) => {
     const { school } = req.body; // Obtener el valor de "school" desde el cuerpo de la solicitud
 
     // Asegurarse de que "school" se haya enviado en la solicitud
-   
+
 
     const sql = `
   select "Curso" , "IdCurso" from "Curso" LIMIT 10
@@ -5901,6 +5904,8 @@ export const comprarplannopremiumv2 = async (req = request, res = response) => {
 };
 
 
+
+
 export const comprarplanpremiumv2 = async (
     req = request,
     res = response
@@ -5937,12 +5942,12 @@ export const listarplanv2 = async (
     res = response
 ) => {
     const sql = `
-       SELECT * FROM "Plan";
+       SELECT * FROM "Plan" where "Estado_id" = '1' ;
     `;
 
     try {
         const data = await db.query(sql, {});
-        
+
 
         return res.status(200).json({
             ok: true,
@@ -8356,5 +8361,853 @@ export const VerificarCodePromo = async (req = request, res = response) => {
         });
     }
 };
+
+
+export const CompraMembresias = async (req = request, res = response) => {
+    const { fdata, fusuario_id, fplan_id, fprecioplan, fplan_nombre, fduracion_dias } = req.body;
+
+    if (!fdata || !Array.isArray(fdata) || fdata.length === 0) {
+        return res.status(400).json({
+            ok: false,
+            msg: "El campo fdata debe ser un array con al menos un elemento.",
+        });
+    }
+
+    if (!fusuario_id || !fplan_id || !fprecioplan || !fplan_nombre || !fduracion_dias) {
+        return res.status(400).json({
+            ok: false,
+            msg: "Faltan datos obligatorios (usuario, plan, precio, nombre del plan o duración del plan).",
+        });
+    }
+
+    const sqlRegistroVenta = `
+        INSERT INTO "RegistroVenta" ("Usuario_id", "Plan_id", "PrecioVenta", "FechaCompra")
+        VALUES (:usuarioId, :plan_id, :precioVenta, CURRENT_TIMESTAMP)
+        RETURNING "IdRegistroVenta";
+    `;
+
+    const sqlProductoStock = `
+        INSERT INTO "ProductoStock" (
+            "Usuario_id", "Producto_id", "StockDisponible", 
+            "RegistroVenta_id", "Membresia_Id", "MetododeCompra", "Membresia_Status"
+        )
+        VALUES (:usuarioId, :productoId, 1, :registroventaid, :membresiaId, 'membresia', :membresiaStatus);
+    `;
+
+    const sqlMembresiaExistente = `
+        SELECT "FechaExpiracion", "IdMembresia"
+        FROM "membresias"
+        WHERE "UsuarioId" = :usuarioId and "Status" = 1
+        ORDER BY "FechaExpiracion" DESC
+        LIMIT 1;
+    `;
+
+    const sqlDesactivarMembresia = `
+        UPDATE "membresias"
+        SET "Status" = 0, "UpdatedAt" = CURRENT_TIMESTAMP
+        WHERE "UsuarioId" = :usuarioId and "Status" = 1;
+    `;
+
+    const sqlInsertMembresia = `
+        INSERT INTO membresias (
+            "UsuarioId", 
+            "Plan", 
+            "FechaInicio", 
+            "FechaExpiracion", 
+            "Status", 
+            "CreatedAt", 
+            "UpdatedAt"
+        ) VALUES (
+            :usuarioId,
+            :planNombre,
+            :fechaInicio,
+            :fechaExpiracion,
+            1,
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        RETURNING "IdMembresia", "Status";
+    `;
+
+    // Nueva consulta para verificar si el producto ya está asociado a una membresía
+    const sqlVerificarProductoMembresia = `
+        SELECT "IdProductoStock"
+        FROM "ProductoStock"
+        WHERE "Usuario_id" = :usuarioId 
+        AND "Producto_id" = :productoId
+        AND "Membresia_Id" IS NOT NULL
+        AND "Membresia_Status" = 1;
+    `;
+
+    // Nueva consulta para eliminar el producto de una membresía anterior
+    const sqlEliminarProductoMembresia = `
+        DELETE FROM "ProductoStock"
+        WHERE "IdProductoStock" = :idProductoStock;
+    `;
+
+    // Nueva consulta para limpiar todos los productos asociados a membresías anteriores
+    const sqlLimpiarProductosMembresiaAnterior = `
+        DELETE FROM "ProductoStock"
+        WHERE "Usuario_id" = :usuarioId
+        AND "Membresia_Id" IS NOT NULL
+        AND "Membresia_Status" = 1;
+    `;
+
+    const calcularFechaExpiracion = (fechaBase: string | number | Date | dayjs.Dayjs | null | undefined, dias: number) => {
+        return dayjs(fechaBase).add(dias, 'day').toDate();
+    };
+
+    try {
+        const transaction = await db.transaction();
+
+        try {
+            // Verificar membresía actual
+            const [membresiaActual] = await db.query(sqlMembresiaExistente, {
+                replacements: { usuarioId: fusuario_id },
+                transaction,
+            });
+
+            let diasRestantes = 0;
+            let fechaInicioMembresia = dayjs();
+            let membresiaId = null;
+
+            if (membresiaActual.length > 0) {
+                const fechaExpActual = dayjs((membresiaActual[0] as any).FechaExpiracion);
+                const hoy = dayjs();
+
+                if (fechaExpActual.isAfter(hoy)) {
+                    diasRestantes = fechaExpActual.diff(hoy, 'day');
+                    fechaInicioMembresia = hoy;
+                }
+
+                // Desactivar membresía anterior si existe
+                membresiaId = (membresiaActual[0] as any).IdMembresia;
+                await db.query(sqlDesactivarMembresia, {
+                    replacements: { usuarioId: fusuario_id },
+                    transaction,
+                });
+
+                // Eliminar todos los productos asociados a membresías anteriores
+                await db.query(sqlLimpiarProductosMembresiaAnterior, {
+                    replacements: { usuarioId: fusuario_id },
+                    transaction,
+                });
+            }
+
+            // Calcular nueva fecha de expiración
+            const totalDias = diasRestantes + parseInt(fduracion_dias);
+            const nuevaFechaExpiracion = calcularFechaExpiracion(fechaInicioMembresia, totalDias);
+
+            const [membresiaResult] = await db.query(sqlInsertMembresia, {
+                replacements: {
+                    usuarioId: fusuario_id,
+                    planNombre: fplan_nombre,
+                    fechaInicio: fechaInicioMembresia.toDate(),
+                    fechaExpiracion: nuevaFechaExpiracion,
+                },
+                transaction,
+            }) as any[];
+
+            const { IdMembresia, Status } = membresiaResult[0];
+
+            // Registrar venta e insertar stock con membresía
+            for (const item of fdata) {
+                const { IdProducto, Precio } = item;
+
+                if (!IdProducto || !Precio) {
+                    throw new Error("Los campos IdProducto y Precio son obligatorios.");
+                }
+
+                // Verificar si el producto ya está asociado a una membresía
+                const [productosExistentes] = await db.query(sqlVerificarProductoMembresia, {
+                    replacements: {
+                        usuarioId: fusuario_id,
+                        productoId: IdProducto
+                    },
+                    transaction,
+                });
+
+                // Si existe, eliminar la asociación anterior
+                if (productosExistentes.length > 0) {
+                    for (const producto of productosExistentes) {
+                        await db.query(sqlEliminarProductoMembresia, {
+                            replacements: {
+                                idProductoStock: (producto as any).IdProductoStock
+                            },
+                            transaction,
+                        });
+                    }
+                }
+
+                const resultRegistroVenta = await db.query(sqlRegistroVenta, {
+                    replacements: {
+                        usuarioId: fusuario_id,
+                        plan_id: fplan_id,
+                        precioVenta: fprecioplan,
+                    },
+                    transaction,
+                });
+
+                const registroVentaId = (resultRegistroVenta[0][0] as any).IdRegistroVenta;
+
+                await db.query(sqlProductoStock, {
+                    replacements: {
+                        usuarioId: fusuario_id,
+                        productoId: IdProducto,
+                        registroventaid: registroVentaId,
+                        membresiaId: IdMembresia,
+                        membresiaStatus: Status,  // Aquí se pasa el status de la membresía
+                    },
+                    transaction,
+                });
+            }
+
+            await transaction.commit();
+
+            return res.status(200).json({
+                ok: true,
+                msg: "Compra realizada correctamente. Productos y membresía asignados.",
+                membresiaId: IdMembresia,
+                statusMembresia: Status,
+            });
+
+        } catch (err) {
+            await transaction.rollback();
+            console.error("Error interno:", err);
+            return res.status(500).json({
+                ok: false,
+                msg: "Error al realizar la compra.",
+            });
+        }
+
+    } catch (err) {
+        console.error("Error al iniciar la transacción:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "No se pudo procesar la transacción.",
+        });
+    }
+};
+
+export const CompraMembresiasProfesional = async (req = request, res = response) => {
+    const { fdata, fusuario_id, fplan_id, fprecioplan, fplan_nombre, fduracion_dias } = req.body;
+
+    if (!fdata || !Array.isArray(fdata) || fdata.length === 0) {
+        return res.status(400).json({
+            ok: false,
+            msg: "El campo fdata debe ser un array con al menos un elemento.",
+        });
+    }
+
+    if (!fusuario_id || !fplan_id || !fprecioplan || !fplan_nombre || !fduracion_dias) {
+        return res.status(400).json({
+            ok: false,
+            msg: "Faltan datos obligatorios (usuario, plan, precio, nombre del plan o duración del plan).",
+        });
+    }
+
+    const sqlRegistroVenta = `
+        INSERT INTO "RegistroVenta" ("Usuario_id", "Plan_id", "PrecioVenta", "FechaCompra")
+        VALUES (:usuarioId, :plan_id, :precioVenta, CURRENT_TIMESTAMP)
+        RETURNING "IdRegistroVenta";
+    `;
+
+    const sqlProductoStock = `
+        INSERT INTO "ProductoStock" (
+            "Usuario_id", "Producto_id", "StockDisponible", 
+            "RegistroVenta_id", "Membresia_Id", "MetododeCompra", "Membresia_Status"
+        )
+        VALUES (:usuarioId, :productoId, 1, :registroventaid, :membresiaId, 'membresia', :membresiaStatus);
+    `;
+
+    const sqlMembresiaExistente = `
+        SELECT "FechaExpiracion", "IdMembresia"
+        FROM "membresias"
+        WHERE "UsuarioId" = :usuarioId and "Status" = 1
+        ORDER BY "FechaExpiracion" DESC
+        LIMIT 1;
+    `;
+
+    const sqlDesactivarMembresia = `
+        UPDATE "membresias"
+        SET "Status" = 0, "UpdatedAt" = CURRENT_TIMESTAMP
+        WHERE "UsuarioId" = :usuarioId and "Status" = 1;
+    `;
+
+    const sqlInsertMembresia = `
+        INSERT INTO membresias (
+            "UsuarioId", 
+            "Plan", 
+            "FechaInicio", 
+            "FechaExpiracion", 
+            "Status", 
+            "CreatedAt", 
+            "UpdatedAt"
+        ) VALUES (
+            :usuarioId,
+            :planNombre,
+            :fechaInicio,
+            :fechaExpiracion,
+            1,
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        RETURNING "IdMembresia", "Status";
+    `;
+
+    // Nueva consulta para verificar si el producto ya está asociado a una membresía
+    const sqlVerificarProductoMembresia = `
+        SELECT "IdProductoStock"
+        FROM "ProductoStock"
+        WHERE "Usuario_id" = :usuarioId 
+        AND "Producto_id" = :productoId
+        AND "Membresia_Id" IS NOT NULL
+        AND "Membresia_Status" = 1;
+    `;
+
+    // Nueva consulta para eliminar el producto de una membresía anterior
+    const sqlEliminarProductoMembresia = `
+        DELETE FROM "ProductoStock"
+        WHERE "IdProductoStock" = :idProductoStock;
+    `;
+
+    // Nueva consulta para limpiar todos los productos asociados a membresías anteriores
+    const sqlLimpiarProductosMembresiaAnterior = `
+        DELETE FROM "ProductoStock"
+        WHERE "Usuario_id" = :usuarioId
+        AND "Membresia_Id" IS NOT NULL
+        AND "Membresia_Status" = 1;
+    `;
+
+    const calcularFechaExpiracion = (fechaBase: string | number | Date | dayjs.Dayjs | null | undefined, dias: number) => {
+        return dayjs(fechaBase).add(dias, 'day').toDate();
+    };
+
+    try {
+        const transaction = await db.transaction();
+
+        try {
+            // Verificar membresía actual
+            const [membresiaActual] = await db.query(sqlMembresiaExistente, {
+                replacements: { usuarioId: fusuario_id },
+                transaction,
+            });
+
+            let diasRestantes = 0;
+            let fechaInicioMembresia = dayjs();
+            let membresiaId = null;
+
+            if (membresiaActual.length > 0) {
+                const fechaExpActual = dayjs((membresiaActual[0] as any).FechaExpiracion);
+                const hoy = dayjs();
+
+                if (fechaExpActual.isAfter(hoy)) {
+                    diasRestantes = fechaExpActual.diff(hoy, 'day');
+                    fechaInicioMembresia = hoy;
+                }
+
+                // Desactivar membresía anterior si existe
+                membresiaId = (membresiaActual[0] as any).IdMembresia;
+                await db.query(sqlDesactivarMembresia, {
+                    replacements: { usuarioId: fusuario_id },
+                    transaction,
+                });
+
+                // Eliminar todos los productos asociados a membresías anteriores
+                await db.query(sqlLimpiarProductosMembresiaAnterior, {
+                    replacements: { usuarioId: fusuario_id },
+                    transaction,
+                });
+            }
+
+            // Calcular nueva fecha de expiración
+            const totalDias = diasRestantes + parseInt(fduracion_dias);
+            const nuevaFechaExpiracion = calcularFechaExpiracion(fechaInicioMembresia, totalDias);
+
+            const [membresiaResult] = await db.query(sqlInsertMembresia, {
+                replacements: {
+                    usuarioId: fusuario_id,
+                    planNombre: fplan_nombre,
+                    fechaInicio: fechaInicioMembresia.toDate(),
+                    fechaExpiracion: nuevaFechaExpiracion,
+                },
+                transaction,
+            }) as any[];
+
+            const { IdMembresia, Status } = membresiaResult[0];
+
+            // Registrar venta e insertar stock con membresía
+            for (const item of fdata) {
+                const { IdProducto, Precio } = item;
+
+                if (!IdProducto || !Precio) {
+                    throw new Error("Los campos IdProducto y Precio son obligatorios.");
+                }
+
+                // Verificar si el producto ya está asociado a una membresía
+                const [productosExistentes] = await db.query(sqlVerificarProductoMembresia, {
+                    replacements: {
+                        usuarioId: fusuario_id,
+                        productoId: IdProducto
+                    },
+                    transaction,
+                });
+
+                // Si existe, eliminar la asociación anterior
+                if (productosExistentes.length > 0) {
+                    for (const producto of productosExistentes) {
+                        await db.query(sqlEliminarProductoMembresia, {
+                            replacements: {
+                                idProductoStock: (producto as any).IdProductoStock
+                            },
+                            transaction,
+                        });
+                    }
+                }
+
+                const resultRegistroVenta = await db.query(sqlRegistroVenta, {
+                    replacements: {
+                        usuarioId: fusuario_id,
+                        plan_id: fplan_id,
+                        precioVenta: fprecioplan,
+                    },
+                    transaction,
+                });
+
+                const registroVentaId = (resultRegistroVenta[0][0] as any).IdRegistroVenta;
+
+                await db.query(sqlProductoStock, {
+                    replacements: {
+                        usuarioId: fusuario_id,
+                        productoId: IdProducto,
+                        registroventaid: registroVentaId,
+                        membresiaId: IdMembresia,
+                        membresiaStatus: Status,  // Aquí se pasa el status de la membresía
+                    },
+                    transaction,
+                });
+            }
+
+            await transaction.commit();
+
+            return res.status(200).json({
+                ok: true,
+                msg: "Compra realizada correctamente. Productos y membresía asignados.",
+                membresiaId: IdMembresia,
+                statusMembresia: Status,
+            });
+
+        } catch (err) {
+            await transaction.rollback();
+            console.error("Error interno:", err);
+            return res.status(500).json({
+                ok: false,
+                msg: "Error al realizar la compra.",
+            });
+        }
+
+    } catch (err) {
+        console.error("Error al iniciar la transacción:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "No se pudo procesar la transacción.",
+        });
+    }
+};
+
+
+export const CompraMembresiasPremium = async (req = request, res = response) => {
+    const { fusuario_id, fplan_id, fprecioplan, fplan_nombre, fduracion_dias } = req.body;
+
+    if (!fusuario_id || !fplan_id || !fprecioplan || !fplan_nombre || !fduracion_dias) {
+        return res.status(400).json({
+            ok: false,
+            msg: "Faltan datos obligatorios (usuario, plan, precio, nombre del plan o duración del plan).",
+        });
+    }
+
+    const sqlObtenerTodosLosCursos = `
+        SELECT "IdCurso" as "IdProducto"
+        FROM "Curso"
+        WHERE "Estado_id" = '1';
+    `;
+
+    const sqlRegistroVenta = `
+        INSERT INTO "RegistroVenta" ("Usuario_id", "Plan_id", "PrecioVenta", "FechaCompra")
+        VALUES (:usuarioId, :plan_id, :precioVenta, CURRENT_TIMESTAMP)
+        RETURNING "IdRegistroVenta";
+    `;
+
+    const sqlProductoStock = `
+        INSERT INTO "ProductoStock" (
+            "Usuario_id", "Producto_id", "StockDisponible", 
+            "RegistroVenta_id", "Membresia_Id", "MetododeCompra", "Membresia_Status"
+        )
+        VALUES (:usuarioId, :productoId, 1, :registroventaid, :membresiaId, 'membresia', :membresiaStatus);
+    `;
+
+    const sqlMembresiaExistente = `
+        SELECT "FechaExpiracion", "IdMembresia"
+        FROM "membresias"
+        WHERE "UsuarioId" = :usuarioId and "Status" = 1
+        ORDER BY "FechaExpiracion" DESC
+        LIMIT 1;
+    `;
+
+    const sqlDesactivarMembresia = `
+        UPDATE "membresias"
+        SET "Status" = 0, "UpdatedAt" = CURRENT_TIMESTAMP
+        WHERE "UsuarioId" = :usuarioId and "Status" = 1;
+    `;
+
+    const sqlInsertMembresia = `
+        INSERT INTO membresias (
+            "UsuarioId", 
+            "Plan", 
+            "FechaInicio", 
+            "FechaExpiracion", 
+            "Status", 
+            "CreatedAt", 
+            "UpdatedAt"
+        ) VALUES (
+            :usuarioId,
+            :planNombre,
+            :fechaInicio,
+            :fechaExpiracion,
+            1,
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        RETURNING "IdMembresia", "Status";
+    `;
+
+    const sqlVerificarProductoMembresia = `
+        SELECT "IdProductoStock"
+        FROM "ProductoStock"
+        WHERE "Usuario_id" = :usuarioId 
+        AND "Producto_id" = :productoId
+        AND "Membresia_Id" IS NOT NULL
+        AND "Membresia_Status" = 1;
+    `;
+
+    const sqlEliminarProductoMembresia = `
+        DELETE FROM "ProductoStock"
+        WHERE "IdProductoStock" = :idProductoStock;
+    `;
+
+    const sqlLimpiarProductosMembresiaAnterior = `
+        DELETE FROM "ProductoStock"
+        WHERE "Usuario_id" = :usuarioId
+        AND "Membresia_Id" IS NOT NULL
+        AND "Membresia_Status" = 1;
+    `;
+
+    const calcularFechaExpiracion = (fechaBase: string | number | Date | dayjs.Dayjs | null | undefined, dias: number) => {
+        return dayjs(fechaBase).add(dias, 'day').toDate();
+    };
+
+    try {
+        const transaction = await db.transaction();
+
+        try {
+            const [membresiaActual] = await db.query(sqlMembresiaExistente, {
+                replacements: { usuarioId: fusuario_id },
+                transaction,
+            });
+
+            let diasRestantes = 0;
+            let fechaInicioMembresia = dayjs();
+            let membresiaId = null;
+
+            if (membresiaActual.length > 0) {
+                const fechaExpActual = dayjs((membresiaActual[0] as any).FechaExpiracion);
+                const hoy = dayjs();
+
+                if (fechaExpActual.isAfter(hoy)) {
+                    diasRestantes = fechaExpActual.diff(hoy, 'day');
+                    fechaInicioMembresia = hoy;
+                }
+
+                membresiaId = (membresiaActual[0] as any).IdMembresia;
+                await db.query(sqlDesactivarMembresia, {
+                    replacements: { usuarioId: fusuario_id },
+                    transaction,
+                });
+
+                await db.query(sqlLimpiarProductosMembresiaAnterior, {
+                    replacements: { usuarioId: fusuario_id },
+                    transaction,
+                });
+            }
+
+            const totalDias = diasRestantes + parseInt(fduracion_dias);
+            const nuevaFechaExpiracion = calcularFechaExpiracion(fechaInicioMembresia, totalDias);
+
+            const [membresiaResult] = await db.query(sqlInsertMembresia, {
+                replacements: {
+                    usuarioId: fusuario_id,
+                    planNombre: fplan_nombre,
+                    fechaInicio: fechaInicioMembresia.toDate(),
+                    fechaExpiracion: nuevaFechaExpiracion,
+                },
+                transaction,
+            }) as any[];
+
+            const { IdMembresia, Status } = membresiaResult[0];
+
+            const [todosLosCursos] = await db.query(sqlObtenerTodosLosCursos, {
+                transaction,
+            }) as any;
+
+            if (!todosLosCursos || todosLosCursos.length === 0) {
+                throw new Error("No hay cursos disponibles para asignar.");
+            }
+
+            for (const curso of todosLosCursos) {
+                const { IdProducto } = curso;
+
+                if (!IdProducto) {
+                    console.warn("Curso sin ID o precio, se omitirá:", curso);
+                    continue;
+                }
+
+                const [productosExistentes] = await db.query(sqlVerificarProductoMembresia, {
+                    replacements: {
+                        usuarioId: fusuario_id,
+                        productoId: IdProducto
+                    },
+                    transaction,
+                });
+
+                if (productosExistentes.length > 0) {
+                    for (const producto of productosExistentes) {
+                        await db.query(sqlEliminarProductoMembresia, {
+                            replacements: {
+                                idProductoStock: (producto as any).IdProductoStock
+                            },
+                            transaction,
+                        });
+                    }
+                }
+
+                const resultRegistroVenta = await db.query(sqlRegistroVenta, {
+                    replacements: {
+                        usuarioId: fusuario_id,
+                        plan_id: fplan_id,
+                        precioVenta: fprecioplan,
+                    },
+                    transaction,
+                });
+
+                const registroVentaId = (resultRegistroVenta[0][0] as any).IdRegistroVenta;
+
+                await db.query(sqlProductoStock, {
+                    replacements: {
+                        usuarioId: fusuario_id,
+                        productoId: IdProducto,
+                        registroventaid: registroVentaId,
+                        membresiaId: IdMembresia,
+                        membresiaStatus: Status,
+                    },
+                    transaction,
+                });
+            }
+
+            await transaction.commit();
+
+            return res.status(200).json({
+                ok: true,
+                msg: "Compra realizada correctamente. Todos los cursos disponibles han sido asignados.",
+                membresiaId: IdMembresia,
+                statusMembresia: Status,
+                totalCursosAsignados: todosLosCursos.length
+            });
+
+        } catch (err) {
+            await transaction.rollback();
+            console.error("Error interno:", err);
+            return res.status(500).json({
+                ok: false,
+                msg: "Error al realizar la compra.",
+            });
+        }
+
+    } catch (err) {
+        console.error("Error al iniciar la transacción:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "No se pudo procesar la transacción.",
+        });
+    }
+};
+
+export const ExtenderMembresia = async (req = request, res = response) => {
+    const { fusuario_id, fplan_nombre } = req.body;
+
+    if (!fusuario_id || !fplan_nombre) {
+        return res.status(400).json({
+            ok: false,
+            msg: "Faltan datos obligatorios (usuario o nombre del plan).",
+        });
+    }
+
+    // Definir días extra según el plan
+    let diasExtra = 0;
+
+    if (fplan_nombre === 1) {
+        diasExtra = 7;
+    } else if (fplan_nombre === 3) {
+        diasExtra = 15;
+    } else if (fplan_nombre === 2) {
+        diasExtra = 30;
+    } else {
+        return res.status(400).json({
+            ok: false,
+            msg: "El plan recibido no es válido (básico, profesional o premium).",
+        });
+    }
+
+    try {
+        const transaction = await db.transaction();
+
+        try {
+            // Buscar la membresía activa
+            const [membresiaActiva] = await db.query(`
+          SELECT "IdMembresia", "FechaExpiracion"
+          FROM "membresias"
+          WHERE "UsuarioId" = :usuarioId
+          AND "Status" = 1
+          ORDER BY "FechaExpiracion" DESC
+          LIMIT 1;
+        `, {
+                replacements: { usuarioId: fusuario_id },
+                transaction,
+            });
+
+            if (membresiaActiva.length === 0) {
+                await transaction.rollback();
+                return res.status(404).json({
+                    ok: false,
+                    msg: "No se encontró una membresía activa para el usuario.",
+                }) as any;
+            }
+
+            const { IdMembresia, FechaExpiracion }: any = membresiaActiva[0];
+            const nuevaFechaExpiracion = dayjs(FechaExpiracion).add(diasExtra, 'day').toDate();
+
+            // Actualizar la membresía con la nueva fecha
+            await db.query(`
+          UPDATE "membresias"
+          SET "FechaExpiracion" = :nuevaFechaExpiracion, "UpdatedAt" = CURRENT_TIMESTAMP
+          WHERE "IdMembresia" = :idMembresia;
+        `, {
+                replacements: {
+                    nuevaFechaExpiracion,
+                    idMembresia: IdMembresia,
+                },
+                transaction,
+            });
+
+            await transaction.commit();
+
+            return res.status(200).json({
+                ok: true,
+                msg: `Membresía extendida correctamente en ${diasExtra} días.`,
+                nuevaFechaExpiracion,
+            });
+
+        } catch (err) {
+            await transaction.rollback();
+            console.error("Error interno:", err);
+            return res.status(500).json({
+                ok: false,
+                msg: "Error al extender la membresía.",
+            });
+        }
+
+    } catch (err) {
+        console.error("Error al iniciar la transacción:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "No se pudo procesar la transacción.",
+        });
+    }
+};
+
+
+
+// Usuarios endpoint
+
+
+
+export const UsuariosData = async (req = request, res = response) => {
+
+    const { fusuario_id } = req.body
+
+
+    const sqlDataUsuario = `
+    SELECT 
+        u."IdUsuario",
+        u."Usuario", 
+        u."RutaImagenPerfil", 
+        u."RutaImagenCuerpo", 
+        json_build_object(
+            'Entidad_id', u."Entidad_id",
+            'Nombres', e."Nombres",
+            'Apellidos', e."Apellidos",
+            'Correo', e."Correo",
+            'Telefono', e."Telefono",
+            'Direccion', e."Direccion",
+            'Genero', e."Genero"
+        ) AS "Entidad",
+        CASE 
+            WHEN n."UsuarioId" IS NOT NULL AND n."Status" = 1 THEN 
+                json_build_object(
+                    'Plan', n."Plan",
+                    'FechaInicio', n."FechaInicio",
+                    'FechaExpiracion', n."FechaExpiracion"
+                )
+            ELSE 
+                json_build_object(
+                    'Plan', NULL,
+                    'FechaInicio', NULL,
+                    'FechaExpiracion', NULL
+                )
+        END AS "Membresia"
+    FROM 
+        public."Usuario" u
+    INNER JOIN 
+        public."Entidad" e ON u."Entidad_id" = e."IdEntidad"
+    LEFT JOIN
+        public."membresias" n ON u."IdUsuario" = n."UsuarioId"
+    WHERE 
+        u."IdUsuario" = :fusuario_id
+        AND (n."Status" = 1 OR n."Status" IS NULL)
+`
+
+
+    try {
+        const [results,] = await db.query(sqlDataUsuario, {
+            replacements: { fusuario_id: fusuario_id },
+        });
+
+        return res.status(200).json({
+            ok: true,
+            msg: "Datos actualizados correctamente",
+            data: results,
+        });
+    } catch (err) {
+        console.error("Error en la consulta SQL:", err);
+        return res.status(400).json({
+            ok: false,
+            msg: "Error al actualizar los datos",
+        });
+    }
+
+
+}
+
+
+
 
 
