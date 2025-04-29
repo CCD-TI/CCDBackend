@@ -12,44 +12,26 @@ import Usuario from "../../models/usuario";
 
 // Backend: Obtener detalles del curso por IdCurso
 export const getcursodetalle = async (req = request, res = response) => {
-  const { IdCurso, Usuario } = req.body;
-
-
+  const { IdCurso, Usuario } = req.body; // Agregamos Usuario como parámetro opcional
+  
   const sql = `
-
- SELECT
+  SELECT 
     JSON_AGG(
-        JSON_BUILD_OBJECT(
-            'TipoModalidad', "tmo"."TipoModalidad",
-            'IdProducto', "pro"."IdProducto",
-            'Precio', "ppr"."Precio",
-            'PrecioAnterior', "ppr"."PrecioAnterior",
-            'FechaInicio',
-            TO_CHAR("sal"."FechaInicio", 'DD') || ' de ' ||
-            CASE
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '01' THEN 'Enero'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '02' THEN 'Febrero'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '03' THEN 'Marzo'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '04' THEN 'Abril'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '05' THEN 'Mayo'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '06' THEN 'Junio'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '07' THEN 'Julio'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '08' THEN 'Agosto'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '09' THEN 'Septiembre'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '10' THEN 'Octubre'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '11' THEN 'Noviembre'
-                WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '12' THEN 'Diciembre'
-            END,
-            'Horario', "sal"."Horario",
-            'YaTieneCurso', (
-                CASE WHEN EXISTS (
-                    SELECT 1 
-                    FROM "ProductoStock" "ps" 
-                    WHERE "ps"."Producto_id" = "pro"."IdProducto" 
-                    AND "ps"."Usuario_id" = :Usuario
-                ) THEN TRUE ELSE FALSE END
-            )
+      JSON_BUILD_OBJECT(
+        'TipoModalidad', "tmo"."TipoModalidad",
+        'IdProducto', "pro"."IdProducto",
+        'Precio', "ppr"."Precio",
+        'PrecioAnterior', "ppr"."PrecioAnterior",
+        'YaTieneCurso', (
+          CASE WHEN :Usuario IS NULL THEN FALSE
+               WHEN EXISTS (
+                 SELECT 1 
+                 FROM "ProductoStock" "ps"
+                 WHERE "ps"."Producto_id" = "pro"."IdProducto"
+                 AND "ps"."Usuario_id" = :Usuario
+               ) THEN TRUE ELSE FALSE END
         )
+      )
     ) AS "Productos",
     MAX(pat."Descripcion") AS "Descripcion",
     MAX(pat."Calificacion") AS "Calificacion",
@@ -63,61 +45,64 @@ export const getcursodetalle = async (req = request, res = response) => {
     MAX(pat."HorasAcademicas") AS "HorasAcademicas",
     MAX(pat."Estado_id") AS "Estado_id",
     MAX(pat."UltimaFechMod") AS "UltimaFechMod",
-    MAX(pat."NumeroWhatsapp") AS "NumeroWhatsapp",
     "esc"."Escuela" AS "Escuela",
     "esp"."Especializacion" AS "Especializacion",
     "cur"."IdCurso" AS "IdCurso",
     "cur"."Curso" AS "Curso",
     "tpo"."TipoCurso" AS "TipoCurso",
-    (
-        SELECT
-            JSON_AGG(CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo"))
-        FROM "ProductoAdjunto" "pad"
-        WHERE "pad"."Curso_id" = "cur"."IdCurso"
+    (SELECT
+      JSON_AGG(CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo"))
+    FROM "ProductoAdjunto" "pad"
+    WHERE "pad"."Curso_id" = "cur"."IdCurso"
     ) AS "RutaImagen",
-    (
-        SELECT COUNT(*) 
-        FROM "ProductoTemario" 
-        WHERE "Curso_id" = "cur"."IdCurso"
-    ) AS "CantidadModulos"
-FROM "Producto" "pro"
-INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
-INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
-INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
-INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
-INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
-LEFT JOIN "Sala" "sal" ON "sal"."Producto_id" = "pro"."IdProducto"
-LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
-LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
-WHERE "cur"."IdCurso" = :IdCurso 
-    AND "cur"."Estado_id" = '1' 
-    AND "pro"."Estado_id" = '1'
-GROUP BY
+    (SELECT COUNT(*) FROM "ProductoTemario" WHERE "Curso_id" = "cur"."IdCurso") AS "CantidadModulos"
+  FROM "Producto" "pro"
+  INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
+  INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
+  INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
+  INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
+  INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
+  LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
+  LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
+  LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
+  WHERE "cur"."IdCurso" = :IdCurso
+  GROUP BY
     "esc"."Escuela",
     "esp"."Especializacion",
     "cur"."IdCurso",
     "cur"."Curso",
-    "tpo"."TipoCurso";
+    "tpo"."TipoCurso",
+    "pad"."Tipo1",
+    "pad"."Tipo2",
+    "pad"."Tipo3",
+    "pad"."Tipo4",
+    "pad"."NombreArchivo";
   `;
-
+  
   try {
-    const [result] = await db.query(sql, {
-      replacements: { IdCurso, Usuario },
+    // Si el usuario no está definido, pasamos NULL en los reemplazos
+    const usuarioValue = Usuario || null;
+    
+    const data = await db.query(sql, {
+      replacements: { 
+        IdCurso,
+        Usuario: usuarioValue
+      },
     });
-
-    if (!result || result.length === 0) {
+    
+    if (!data.length) {
       return res.status(404).json({
         ok: false,
         msg: "Curso no encontrado",
       });
     }
-
+    
     return res.status(200).json({
       ok: true,
-      data: result,
+      data: data[0], // Enviar solo el primer curso
     });
-  } catch (err: any) {
-    console.error("Error en la consulta SQL:", err.message);
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({
       ok: false,
       msg: "Error al buscar el curso",
