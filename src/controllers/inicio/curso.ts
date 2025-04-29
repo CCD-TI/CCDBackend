@@ -1209,78 +1209,90 @@ export const vercursosespecializacionescuela = async (
   res = response
 ) => {
   const { Escuela, T1, T2, T3, T4, Usuario } = req.body;
-
-
+  
+  // Modificamos la consulta SQL para manejar el caso cuando Usuario no está presente
   const sql = `
-      SELECT
-    JSON_AGG(
+    SELECT
+      JSON_AGG(
         JSON_BUILD_OBJECT(
-            'TipoModalidad', "tmo"."TipoModalidad",
-            'IdProducto', "pro"."IdProducto",
-            'Precio', "ppr"."Precio",
-            'PrecioAnterior', "ppr"."PrecioAnterior",
-            'YaTieneCurso', (
-                CASE WHEN EXISTS (
-                    SELECT 1 
-                    FROM "ProductoStock" "ps" 
-                    WHERE "ps"."Producto_id" = "pro"."IdProducto" 
-                    AND "ps"."Usuario_id" = :Usuario
-                ) THEN TRUE ELSE FALSE END
-            )
+          'TipoModalidad', "tmo"."TipoModalidad",
+          'IdProducto', "pro"."IdProducto",
+          'Precio', "ppr"."Precio",
+          'PrecioAnterior', "ppr"."PrecioAnterior",
+          'YaTieneCurso', (
+            CASE WHEN :Usuario IS NULL THEN FALSE
+                 WHEN EXISTS (
+                   SELECT 1 
+                   FROM "ProductoStock" "ps"
+                   WHERE "ps"."Producto_id" = "pro"."IdProducto"
+                   AND "ps"."Usuario_id" = :Usuario
+                 ) THEN TRUE ELSE FALSE END
+          )
         )
-    ) AS "Productos",
-    MAX(pat."Descripcion") AS "Descripcion",
-    MAX(pat."Calificacion") AS "Calificacion",
-    MAX(pat."Seguidores") AS "Seguidores",
-    MAX(pat."Nivel") AS "Nivel",
-    MAX(pat."MarcasRespaldo") AS "MarcasRespaldo",
-    MAX(pat."ExamenParcial") AS "ExamenParcial",
-    MAX(pat."ExamenFinal") AS "ExamenFinal",
-    MAX(pat."Profesores") AS "Profesores",
-    MAX(pat."Frecuencia") AS "Frecuencia",
-    MAX(pat."HorasAcademicas") AS "HorasAcademicas",
-    MAX(pat."Estado_id") AS "Estado_id",
-    MAX(pat."UltimaFechMod") AS "UltimaFechMod",
-    "esc"."Escuela" AS "Escuela",
-    "esp"."Especializacion" AS "Especializacion",
-    "cur"."IdCurso" AS "IdCurso",
-    "cur"."Curso" AS "Curso",
-    "tpo"."TipoCurso" AS "TipoCurso",
-    CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo") AS "RutaImagen",
-    (SELECT COUNT(*) FROM "ProductoTemario" WHERE "Curso_id" = "cur"."IdCurso") AS "CantidadModulos"
-FROM "Producto" "pro"
-INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
-INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
-INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
-INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
-INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
-LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
-LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
-LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
-WHERE "esc"."Escuela" = :Escuela 
-  AND "pad"."Tipo1" = :T1 
-  AND "pad"."Tipo2" = :T2 
-  AND "pad"."Tipo3" = :T3 
-  AND "pad"."Tipo4" = :T4 
-  AND "pro"."Estado_id" = '1' 
-  AND "cur"."Estado_id" = '1'
-GROUP BY
-    "esc"."Escuela",
-    "esp"."Especializacion",
-    "cur"."IdCurso",
-    "cur"."Curso",
-    "tpo"."TipoCurso",
-    "pad"."Tipo1",
-    "pad"."Tipo2",
-    "pad"."Tipo3",
-    "pad"."Tipo4",
-    "pad"."NombreArchivo";
-    `;
+      ) AS "Productos",
+      MAX(pat."Descripcion") AS "Descripcion",
+      MAX(pat."Calificacion") AS "Calificacion",
+      MAX(pat."Seguidores") AS "Seguidores",
+      MAX(pat."Nivel") AS "Nivel",
+      MAX(pat."MarcasRespaldo") AS "MarcasRespaldo",
+      MAX(pat."ExamenParcial") AS "ExamenParcial",
+      MAX(pat."ExamenFinal") AS "ExamenFinal",
+      MAX(pat."Profesores") AS "Profesores",
+      MAX(pat."Frecuencia") AS "Frecuencia",
+      MAX(pat."HorasAcademicas") AS "HorasAcademicas",
+      MAX(pat."Estado_id") AS "Estado_id",
+      MAX(pat."UltimaFechMod") AS "UltimaFechMod",
+      "esc"."Escuela" AS "Escuela",
+      "esp"."Especializacion" AS "Especializacion",
+      "cur"."IdCurso" AS "IdCurso",
+      "cur"."Curso" AS "Curso",
+      "tpo"."TipoCurso" AS "TipoCurso",
+      CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo") AS "RutaImagen",
+      (SELECT COUNT(*) FROM "ProductoTemario" WHERE "Curso_id" = "cur"."IdCurso") AS "CantidadModulos"
+    FROM "Producto" "pro"
+    INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
+    INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
+    INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
+    INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
+    INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
+    LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
+    LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
+    LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
+    WHERE "esc"."Escuela" = :Escuela
+    AND "pad"."Tipo1" = :T1
+    AND "pad"."Tipo2" = :T2
+    AND "pad"."Tipo3" = :T3
+    AND "pad"."Tipo4" = :T4
+    AND "pro"."Estado_id" = '1'
+    AND "cur"."Estado_id" = '1'
+    GROUP BY
+      "esc"."Escuela",
+      "esp"."Especializacion",
+      "cur"."IdCurso",
+      "cur"."Curso",
+      "tpo"."TipoCurso",
+      "pad"."Tipo1",
+      "pad"."Tipo2",
+      "pad"."Tipo3",
+      "pad"."Tipo4",
+      "pad"."NombreArchivo"
+  `;
 
   try {
+    // Si el usuario no está definido, pasamos NULL en los reemplazos
+    const usuarioValue = Usuario || null;
+    
     const data = await db.query(sql, {
-      replacements: { Escuela, T1, T2,T3, T4 ,Usuario }, // Reemplazamos las variables con valores dinámicos.
+      replacements: { 
+        Escuela, 
+        T1, 
+        T2, 
+        T3, 
+        T4, 
+        Usuario: usuarioValue 
+      },
     });
+    
     return res.status(200).json({
       ok: true,
       msg: "Información obtenida correctamente",
