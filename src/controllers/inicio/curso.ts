@@ -868,12 +868,9 @@ export const getcursoescuelaespecializacion = async (
   req = request,
   res = response
 ) => {
-  const { Escuela,Usuario } = req.body;
-
-
+  const { Escuela, Usuario } = req.body;
 
   const sql = `
-
   SELECT 
   JSON_AGG(
     JSON_BUILD_OBJECT(
@@ -897,17 +894,18 @@ export const getcursoescuelaespecializacion = async (
           WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '11' THEN 'Noviembre'
           WHEN TO_CHAR("sal"."FechaInicio", 'MM') = '12' THEN 'Diciembre'
         END,
-            'Horario', "sal"."Horario",
-            'YaTieneCurso', (
-                CASE WHEN EXISTS (
-                    SELECT 1 
-                    FROM "ProductoStock" "ps" 
-                    WHERE "ps"."Producto_id" = "pro"."IdProducto" 
-                    AND "ps"."Usuario_id" = :Usuario
-                ) THEN TRUE ELSE FALSE END
-            )
-        )
-    ) AS "Productos",
+      'Horario', "sal"."Horario",
+      'YaTieneCurso', (
+        CASE WHEN :Usuario IS NULL THEN FALSE
+             WHEN EXISTS (
+               SELECT 1 
+               FROM "ProductoStock" "ps" 
+               WHERE "ps"."Producto_id" = "pro"."IdProducto" 
+               AND "ps"."Usuario_id" = :Usuario
+             ) THEN TRUE ELSE FALSE END
+      )
+    )
+  ) AS "Productos",
   MAX(pat."Descripcion") AS "Descripcion",
   MAX(pat."Calificacion") AS "Calificacion",
   MAX(pat."Seguidores") AS "Seguidores",
@@ -948,11 +946,17 @@ GROUP BY
   "cur"."IdCurso",
   "cur"."Curso",
   "tpo"."TipoCurso";
-    `;
+  `;
 
   try {
+    // Si el usuario no está definido, pasamos NULL en los reemplazos
+    const usuarioValue = Usuario || null;
+    
     const [result] = await db.query(sql, {
-      replacements: { Escuela , Usuario},
+      replacements: { 
+        Escuela,
+        Usuario: usuarioValue
+      },
     });
 
     if (!result || result.length === 0) {
@@ -966,7 +970,7 @@ GROUP BY
       ok: true,
       data: result,
     });
-  } catch (err: any) {
+  } catch (err:any) {
     console.error("Error en la consulta SQL:", err.message);
     return res.status(500).json({
       ok: false,
