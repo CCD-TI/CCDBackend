@@ -3555,126 +3555,135 @@ export const listarespecializacionesxescuelav2 = async (
 export const listarcursoxusuariov2 = async (req = request, res = response) => {
     const { fusuario_id } = req.body;
 
-    // Ajusta la consulta SQL a tus necesidades
-    const sql = `
-
-    WITH ProfesoresProcesados AS (
-        SELECT
-            "pro"."IdProducto",
-            UNNEST(string_to_array(MAX("pat"."Profesores"), ',')::int[]) AS "ProfesorId"
-        FROM "Producto" "pro"
-        LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "pro"."Curso_id"
-        GROUP BY "pro"."IdProducto"
-    )
-    SELECT
-        SUM(
-        CASE 
-            WHEN tmo."TipoModalidad" = 'En Vivo' 
-            THEN (SELECT count(distinct ev."IdEvaluacion")
-                  FROM "Evaluacion" ev
-                  LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
-                  WHERE ev."Curso_id" = cur."IdCurso"
-                  AND evn."IdEvaluacionNota" IS NOT NULL 
-                  AND evn."Sala_id" = sa."IdSala"
-                  AND evn."Usuario_id"=${fusuario_id})
-            WHEN tmo."TipoModalidad" = 'Asincrónico' 
-            THEN (SELECT count(distinct ev."IdEvaluacion")
-                  FROM "Evaluacion" ev
-                  LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
-                  WHERE ev."Curso_id" = cur."IdCurso"
-                  AND evn."IdEvaluacionNota" IS NOT NULL 
-                  AND evn."Sala_id" IS NULL
-                   AND evn."Usuario_id"=${fusuario_id})
-            ELSE 0
-        END
-    )+( SELECT COUNT(DISTINCT e."IdEncuesta")
-               FROM "Encuesta" e
-               LEFT JOIN "EncuestaRespondida" er 
-                 ON er."Encuesta_id" = e."IdEncuesta"
-               WHERE er."Producto_id" ="pro"."IdProducto" and er."Usuario_id"=${fusuario_id}) AS "Progreso",
-    
-        (
-            SELECT COUNT(*)
-            FROM "Evaluacion" eval
-            WHERE eval."Curso_id" =  cur."IdCurso"
-        ) +
-        (
-            SELECT COUNT(*)
-            FROM "Encuesta"
-        ) AS "ProgresoTotal",
-        JSON_AGG(
-            JSON_BUILD_OBJECT(
-                'TipoModalidad', "tmo"."TipoModalidad",
-                'IdProducto', "pro"."IdProducto",
-                'Sala', "sa"."Sala"
-            )
-        ) AS "Productos",
-        (
-            SELECT JSON_AGG("RutaImagenPerfil")
-            FROM "Usuario"
-            WHERE "IdUsuario" IN (
-                SELECT "ProfesorId"
-                FROM ProfesoresProcesados pp
-                WHERE pp."IdProducto" = "pro"."IdProducto"
-            )
-        ) AS "RutaImagenPerfil",
-    (select Count(*) from "SalaUsuario" where "Usuario_id"=${fusuario_id}  and "Sala_id"=MAX("sa"."IdSala")) as "Inscrito",
-        MAX(pat."Descripcion") AS "Descripcion",
-        MAX(pat."Calificacion") AS "Calificacion",
-        MAX(pat."Seguidores") AS "Seguidores",
-        MAX(pat."Nivel") AS "Nivel",
-        MAX(pat."MarcasRespaldo") AS "MarcasRespaldo",
-        MAX(pat."ExamenParcial") AS "ExamenParcial",
-        MAX(pat."ExamenFinal") AS "ExamenFinal",
-        MAX(pat."Profesores") AS "Profesores",
-        MAX(pat."Frecuencia") AS "Frecuencia",
-        MAX(pat."HorasAcademicas") AS "HorasAcademicas",
-        MAX(pat."Estado_id") AS "Estado_id",
-        MAX(pat."UltimaFechMod") AS "UltimaFechMod",
-        CONCAT(
-                    '/', COALESCE(pad."Tipo1", ''), 
-                    '/', COALESCE(pad."Tipo2", ''), 
-                    '/', COALESCE(pad."Tipo3", ''), 
-                    '/', COALESCE(pad."Tipo4", ''), 
-                    '/', COALESCE(pad."NombreArchivo", '')) as "RutaImagen",
-        "Escuela",
-        "Especializacion",
-        "IdCurso",
-        "Curso",
-        "TipoCurso",
-        "cur"."CodigoCurso",
-        "pro"."IdProducto"
-    FROM "Producto" "pro"
-    INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
-    INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
-    INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
-    INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
-    LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
-    LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
-    INNER JOIN "ProductoStock" "pst" ON "pst"."Producto_id" = "pro"."IdProducto"
-    INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
-    LEFT JOIN "Sala" "sa" ON "sa"."Producto_id" = "pro"."IdProducto"
-    WHERE "pst"."Usuario_id" = ${fusuario_id} and pad."Tipo4"='PortadaFinalEGP'
-    GROUP BY
-        "Escuela",
-        "Especializacion",
-        "IdCurso",
-        "Curso",
-        "TipoCurso",
-        "cur"."CodigoCurso",
-        "pro"."IdProducto",
-        pad."Tipo1",
-        pad."Tipo2",
-        pad."Tipo3",
-        pad."Tipo4",
-        pad."NombreArchivo";
-    
-
-    `;
+    // Consulta para saber si el usuario es premium
+    const consultaPremium = `SELECT "Premium" FROM "Usuario" WHERE "IdUsuario" = ${fusuario_id}`;
 
     try {
-        // Ejecutar la consulta SQL directamente usando sequelize.query
-        const data = await db.query(sql, {});
+        const [resultado]:any  = await db.query(consultaPremium);
+        const esPremium = resultado?.[0]?.Premium;
+
+        const condicionJoinStock = esPremium
+            ? '' // No filtrar por ProductoStock si es premium
+            : 'INNER JOIN "ProductoStock" "pst" ON "pst"."Producto_id" = "pro"."IdProducto"';
+
+        const condicionWhereStock = esPremium
+            ? ''
+            : `AND "pst"."Usuario_id" = ${fusuario_id}`;
+
+        const sql = `
+        WITH ProfesoresProcesados AS (
+            SELECT
+                "pro"."IdProducto",
+                UNNEST(string_to_array(MAX("pat"."Profesores"), ',')::int[]) AS "ProfesorId"
+            FROM "Producto" "pro"
+            LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "pro"."Curso_id"
+            GROUP BY "pro"."IdProducto"
+        )
+        SELECT
+            SUM(
+            CASE 
+                WHEN tmo."TipoModalidad" = 'En Vivo' 
+                THEN (SELECT count(distinct ev."IdEvaluacion")
+                      FROM "Evaluacion" ev
+                      LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                      WHERE ev."Curso_id" = cur."IdCurso"
+                      AND evn."IdEvaluacionNota" IS NOT NULL 
+                      AND evn."Sala_id" = sa."IdSala"
+                      AND evn."Usuario_id"=${fusuario_id})
+                WHEN tmo."TipoModalidad" = 'Asincrónico' 
+                THEN (SELECT count(distinct ev."IdEvaluacion")
+                      FROM "Evaluacion" ev
+                      LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                      WHERE ev."Curso_id" = cur."IdCurso"
+                      AND evn."IdEvaluacionNota" IS NOT NULL 
+                      AND evn."Sala_id" IS NULL
+                       AND evn."Usuario_id"=${fusuario_id})
+                ELSE 0
+            END
+        )+( SELECT COUNT(DISTINCT e."IdEncuesta")
+                   FROM "Encuesta" e
+                   LEFT JOIN "EncuestaRespondida" er 
+                     ON er."Encuesta_id" = e."IdEncuesta"
+                   WHERE er."Producto_id" ="pro"."IdProducto" and er."Usuario_id"=${fusuario_id}) AS "Progreso",
+
+            (
+                SELECT COUNT(*)
+                FROM "Evaluacion" eval
+                WHERE eval."Curso_id" =  cur."IdCurso"
+            ) +
+            (
+                SELECT COUNT(*)
+                FROM "Encuesta"
+            ) AS "ProgresoTotal",
+            JSON_AGG(
+                JSON_BUILD_OBJECT(
+                    'TipoModalidad', "tmo"."TipoModalidad",
+                    'IdProducto', "pro"."IdProducto",
+                    'Sala', "sa"."Sala"
+                )
+            ) AS "Productos",
+            (
+                SELECT JSON_AGG("RutaImagenPerfil")
+                FROM "Usuario"
+                WHERE "IdUsuario" IN (
+                    SELECT "ProfesorId"
+                    FROM ProfesoresProcesados pp
+                    WHERE pp."IdProducto" = "pro"."IdProducto"
+                )
+            ) AS "RutaImagenPerfil",
+        (select Count(*) from "SalaUsuario" where "Usuario_id"=${fusuario_id}  and "Sala_id"=MAX("sa"."IdSala")) as "Inscrito",
+            MAX(pat."Descripcion") AS "Descripcion",
+            MAX(pat."Calificacion") AS "Calificacion",
+            MAX(pat."Seguidores") AS "Seguidores",
+            MAX(pat."Nivel") AS "Nivel",
+            MAX(pat."MarcasRespaldo") AS "MarcasRespaldo",
+            MAX(pat."ExamenParcial") AS "ExamenParcial",
+            MAX(pat."ExamenFinal") AS "ExamenFinal",
+            MAX(pat."Profesores") AS "Profesores",
+            MAX(pat."Frecuencia") AS "Frecuencia",
+            MAX(pat."HorasAcademicas") AS "HorasAcademicas",
+            MAX(pat."Estado_id") AS "Estado_id",
+            MAX(pat."UltimaFechMod") AS "UltimaFechMod",
+            CONCAT(
+                        '/', COALESCE(pad."Tipo1", ''), 
+                        '/', COALESCE(pad."Tipo2", ''), 
+                        '/', COALESCE(pad."Tipo3", ''), 
+                        '/', COALESCE(pad."Tipo4", ''), 
+                        '/', COALESCE(pad."NombreArchivo", '')) as "RutaImagen",
+            "Escuela",
+            "Especializacion",
+            "IdCurso",
+            "Curso",
+            "TipoCurso",
+            "cur"."CodigoCurso",
+            "pro"."IdProducto"
+        FROM "Producto" "pro"
+        INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
+        INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
+        INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
+        INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
+        LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
+        LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
+        ${condicionJoinStock}
+        INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
+        LEFT JOIN "Sala" "sa" ON "sa"."Producto_id" = "pro"."IdProducto"
+        WHERE pad."Tipo4"='PortadaFinalEGP' ${condicionWhereStock}
+        GROUP BY
+            "Escuela",
+            "Especializacion",
+            "IdCurso",
+            "Curso",
+            "TipoCurso",
+            "cur"."CodigoCurso",
+            "pro"."IdProducto",
+            pad."Tipo1",
+            pad."Tipo2",
+            pad."Tipo3",
+            pad."Tipo4",
+            pad."NombreArchivo";
+        `;
+
+        const data = await db.query(sql);
         return res.status(200).json({
             ok: true,
             msg: "Información correcta",
@@ -3688,6 +3697,8 @@ export const listarcursoxusuariov2 = async (req = request, res = response) => {
         });
     }
 };
+
+
 export const listarfullaccessv2 = async (req = request, res = response) => {
     const { fusuario_id } = req.body;
 
@@ -8826,24 +8837,10 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
         });
     }
 
-    const sqlObtenerTodosLosCursos = `
-        SELECT "IdCurso" as "IdProducto"
-        FROM "Curso"
-        WHERE "Estado_id" = '1';
-    `;
-
     const sqlRegistroVenta = `
         INSERT INTO "RegistroVenta" ("Usuario_id", "Plan_id", "PrecioVenta", "FechaCompra")
         VALUES (:usuarioId, :plan_id, :precioVenta, CURRENT_TIMESTAMP)
         RETURNING "IdRegistroVenta";
-    `;
-
-    const sqlProductoStock = `
-        INSERT INTO "ProductoStock" (
-            "Usuario_id", "Producto_id", "StockDisponible", 
-            "RegistroVenta_id", "Membresia_Id", "MetododeCompra", "Membresia_Status"
-        )
-        VALUES (:usuarioId, :productoId, 1, :registroventaid, :membresiaId, 'membresia', :membresiaStatus);
     `;
 
     const sqlMembresiaExistente = `
@@ -8861,7 +8858,7 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
     `;
 
     const sqlInsertMembresia = `
-        INSERT INTO membresias (
+        INSERT INTO "membresias" (
             "UsuarioId", 
             "Plan", 
             "FechaInicio", 
@@ -8881,25 +8878,10 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
         RETURNING "IdMembresia", "Status";
     `;
 
-    const sqlVerificarProductoMembresia = `
-        SELECT "IdProductoStock"
-        FROM "ProductoStock"
-        WHERE "Usuario_id" = :usuarioId 
-        AND "Producto_id" = :productoId
-        AND "Membresia_Id" IS NOT NULL
-        AND "Membresia_Status" = 1;
-    `;
-
-    const sqlEliminarProductoMembresia = `
-        DELETE FROM "ProductoStock"
-        WHERE "IdProductoStock" = :idProductoStock;
-    `;
-
-    const sqlLimpiarProductosMembresiaAnterior = `
-        DELETE FROM "ProductoStock"
-        WHERE "Usuario_id" = :usuarioId
-        AND "Membresia_Id" IS NOT NULL
-        AND "Membresia_Status" = 1;
+    const sqlActualizarPremium = `
+        UPDATE "Usuario"
+        SET "Premium" = 1
+        WHERE "IdUsuario" = :usuarioId;
     `;
 
     const calcularFechaExpiracion = (fechaBase: string | number | Date | dayjs.Dayjs | null | undefined, dias: number) => {
@@ -8910,6 +8892,19 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
         const transaction = await db.transaction();
 
         try {
+            // 1. Registrar la venta
+            const [ventaResult] = await db.query(sqlRegistroVenta, {
+                replacements: {
+                    usuarioId: fusuario_id,
+                    plan_id: fplan_id,
+                    precioVenta: fprecioplan,
+                },
+                transaction,
+            }) as any[];
+
+            const idRegistroVenta = ventaResult[0]?.IdRegistroVenta;
+
+            // 2. Consultar membresía actual
             const [membresiaActual] = await db.query(sqlMembresiaExistente, {
                 replacements: { usuarioId: fusuario_id },
                 transaction,
@@ -8917,7 +8912,6 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
 
             let diasRestantes = 0;
             let fechaInicioMembresia = dayjs();
-            let membresiaId = null;
 
             if (membresiaActual.length > 0) {
                 const fechaExpActual = dayjs((membresiaActual[0] as any).FechaExpiracion);
@@ -8928,18 +8922,13 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
                     fechaInicioMembresia = hoy;
                 }
 
-                membresiaId = (membresiaActual[0] as any).IdMembresia;
                 await db.query(sqlDesactivarMembresia, {
-                    replacements: { usuarioId: fusuario_id },
-                    transaction,
-                });
-
-                await db.query(sqlLimpiarProductosMembresiaAnterior, {
                     replacements: { usuarioId: fusuario_id },
                     transaction,
                 });
             }
 
+            // 3. Insertar nueva membresía
             const totalDias = diasRestantes + parseInt(fduracion_dias);
             const nuevaFechaExpiracion = calcularFechaExpiracion(fechaInicioMembresia, totalDias);
 
@@ -8955,72 +8944,20 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
 
             const { IdMembresia, Status } = membresiaResult[0];
 
-            const [todosLosCursos] = await db.query(sqlObtenerTodosLosCursos, {
+            // 4. Actualizar usuario como Premium
+            await db.query(sqlActualizarPremium, {
+                replacements: { usuarioId: fusuario_id },
                 transaction,
-            }) as any;
-
-            if (!todosLosCursos || todosLosCursos.length === 0) {
-                throw new Error("No hay cursos disponibles para asignar.");
-            }
-
-            for (const curso of todosLosCursos) {
-                const { IdProducto } = curso;
-
-                if (!IdProducto) {
-                    console.warn("Curso sin ID o precio, se omitirá:", curso);
-                    continue;
-                }
-
-                const [productosExistentes] = await db.query(sqlVerificarProductoMembresia, {
-                    replacements: {
-                        usuarioId: fusuario_id,
-                        productoId: IdProducto
-                    },
-                    transaction,
-                });
-
-                if (productosExistentes.length > 0) {
-                    for (const producto of productosExistentes) {
-                        await db.query(sqlEliminarProductoMembresia, {
-                            replacements: {
-                                idProductoStock: (producto as any).IdProductoStock
-                            },
-                            transaction,
-                        });
-                    }
-                }
-
-                const resultRegistroVenta = await db.query(sqlRegistroVenta, {
-                    replacements: {
-                        usuarioId: fusuario_id,
-                        plan_id: fplan_id,
-                        precioVenta: fprecioplan,
-                    },
-                    transaction,
-                });
-
-                const registroVentaId = (resultRegistroVenta[0][0] as any).IdRegistroVenta;
-
-                await db.query(sqlProductoStock, {
-                    replacements: {
-                        usuarioId: fusuario_id,
-                        productoId: IdProducto,
-                        registroventaid: registroVentaId,
-                        membresiaId: IdMembresia,
-                        membresiaStatus: Status,
-                    },
-                    transaction,
-                });
-            }
+            });
 
             await transaction.commit();
 
             return res.status(200).json({
                 ok: true,
-                msg: "Compra realizada correctamente. Todos los cursos disponibles han sido asignados.",
+                msg: "Compra realizada correctamente. El usuario ahora es premium.",
                 membresiaId: IdMembresia,
                 statusMembresia: Status,
-                totalCursosAsignados: todosLosCursos.length
+                registroVentaId: idRegistroVenta
             });
 
         } catch (err) {
@@ -9040,6 +8977,10 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
         });
     }
 };
+
+
+
+
 
 export const ExtenderMembresia = async (req = request, res = response) => {
     const { fusuario_id, fplan_nombre } = req.body;
