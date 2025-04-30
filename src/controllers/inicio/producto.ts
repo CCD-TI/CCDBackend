@@ -1015,15 +1015,15 @@ export const EnviarCorreoPago = async (req = request, res = response) => {
             port: 465,
             secure: true, // true para puerto 465, false para otros puertos
             auth: {
-                user: "infenix.reborn@gmail.com", // Tu email
-                pass: "jvnl xnqt bzui ovfw", // Tu contraseña o contraseña de aplicación
+                user: "paginawebccd@gmail.com", // Tu email
+                pass: "iplg sjuy hapk azsv", // Tu contraseña o contraseña de aplicación
             },
         });
 
         const mailOptions = {
-            from: '"Centro de Capacitación y Desarrollo" <CcdEmpresas@ccd.edu.pe>',
+            from: '"Especialistas en Gestion Pública" ',
             to: pdestinatario,
-            subject: "CCD-Bienvenida",
+            subject: "EGP-Bienvenida",
             html: pmensaje,
         };
 
