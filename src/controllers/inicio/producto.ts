@@ -5260,90 +5260,90 @@ export const verespecializacionesmineria = async (
 };
 
 // Backend: Obtener detalles del curso por IdCurso
-export const getcursodetalle = async (req = request, res = response) => {
-    const { IdCurso } = req.body;
+// export const getcursodetalle = async (req = request, res = response) => {
+//     const { IdCurso } = req.body;
 
-    const sql = `
- SELECT
-      JSON_AGG(
-        JSON_BUILD_OBJECT(
-          'TipoModalidad', "tmo"."TipoModalidad",
-          'IdProducto', "pro"."IdProducto",
-          'Precio', "ppr"."Precio"
-        )
-      ) AS "Productos",
-      MAX(pat."Descripcion") AS "Descripcion",
-      MAX(pat."Calificacion") AS "Calificacion",
-      MAX(pat."Seguidores") AS "Seguidores",
-      MAX(pat."Nivel") AS "Nivel",
-      MAX(pat."MarcasRespaldo") AS "MarcasRespaldo",
-      MAX(pat."ExamenParcial") AS "ExamenParcial",
-      MAX(pat."ExamenFinal") AS "ExamenFinal",
-      MAX(pat."Profesores") AS "Profesores",
-      MAX(pat."Frecuencia") AS "Frecuencia",
-      MAX(pat."HorasAcademicas") AS "HorasAcademicas",
-      MAX(pat."Estado_id") AS "Estado_id",
-      MAX(pat."UltimaFechMod") AS "UltimaFechMod",
-      "esc"."Escuela" AS "Escuela",
-      "esp"."Especializacion" AS "Especializacion",
-      "cur"."IdCurso" AS "IdCurso",
-      "cur"."Curso" AS "Curso",
-      "tpo"."TipoCurso" AS "TipoCurso",
-       (SELECT 
-      JSON_AGG(CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo"))
-    FROM "ProductoAdjunto" "pad"
-    WHERE "pad"."Curso_id" = "cur"."IdCurso"
-  ) AS "RutaImagen",
-      (SELECT COUNT(*) FROM "ProductoTemario" WHERE "Curso_id" = "cur"."IdCurso") AS "CantidadModulos"
-    FROM "Producto" "pro"
-    INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
-    INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
-    INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
-    INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
-    INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
-    LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
-    LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
-    LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
-   WHERE "cur"."IdCurso" = :IdCurso
-    GROUP BY
-      "esc"."Escuela",
-      "esp"."Especializacion",
-      "cur"."IdCurso",
-      "cur"."Curso",
-      "tpo"."TipoCurso",
-      "pad"."Tipo1",
-      "pad"."Tipo2",
-      "pad"."Tipo3",
-      "pad"."Tipo4",
-      "pad"."NombreArchivo";
+//     const sql = `
+//  SELECT
+//       JSON_AGG(
+//         JSON_BUILD_OBJECT(
+//           'TipoModalidad', "tmo"."TipoModalidad",
+//           'IdProducto', "pro"."IdProducto",
+//           'Precio', "ppr"."Precio"
+//         )
+//       ) AS "Productos",
+//       MAX(pat."Descripcion") AS "Descripcion",
+//       MAX(pat."Calificacion") AS "Calificacion",
+//       MAX(pat."Seguidores") AS "Seguidores",
+//       MAX(pat."Nivel") AS "Nivel",
+//       MAX(pat."MarcasRespaldo") AS "MarcasRespaldo",
+//       MAX(pat."ExamenParcial") AS "ExamenParcial",
+//       MAX(pat."ExamenFinal") AS "ExamenFinal",
+//       MAX(pat."Profesores") AS "Profesores",
+//       MAX(pat."Frecuencia") AS "Frecuencia",
+//       MAX(pat."HorasAcademicas") AS "HorasAcademicas",
+//       MAX(pat."Estado_id") AS "Estado_id",
+//       MAX(pat."UltimaFechMod") AS "UltimaFechMod",
+//       "esc"."Escuela" AS "Escuela",
+//       "esp"."Especializacion" AS "Especializacion",
+//       "cur"."IdCurso" AS "IdCurso",
+//       "cur"."Curso" AS "Curso",
+//       "tpo"."TipoCurso" AS "TipoCurso",
+//        (SELECT 
+//       JSON_AGG(CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo"))
+//     FROM "ProductoAdjunto" "pad"
+//     WHERE "pad"."Curso_id" = "cur"."IdCurso"
+//   ) AS "RutaImagen",
+//       (SELECT COUNT(*) FROM "ProductoTemario" WHERE "Curso_id" = "cur"."IdCurso") AS "CantidadModulos"
+//     FROM "Producto" "pro"
+//     INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
+//     INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
+//     INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
+//     INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
+//     INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
+//     LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
+//     LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
+//     LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
+//    WHERE "cur"."IdCurso" = :IdCurso
+//     GROUP BY
+//       "esc"."Escuela",
+//       "esp"."Especializacion",
+//       "cur"."IdCurso",
+//       "cur"."Curso",
+//       "tpo"."TipoCurso",
+//       "pad"."Tipo1",
+//       "pad"."Tipo2",
+//       "pad"."Tipo3",
+//       "pad"."Tipo4",
+//       "pad"."NombreArchivo";
 
 
-    `;
+//     `;
 
-    try {
-        const data = await db.query(sql, {
-            replacements: { IdCurso },
-        });
+//     try {
+//         const data = await db.query(sql, {
+//             replacements: { IdCurso },
+//         });
 
-        if (!data.length) {
-            return res.status(404).json({
-                ok: false,
-                msg: "Curso no encontrado",
-            });
-        }
+//         if (!data.length) {
+//             return res.status(404).json({
+//                 ok: false,
+//                 msg: "Curso no encontrado",
+//             });
+//         }
 
-        return res.status(200).json({
-            ok: true,
-            data: data[0], // Enviar solo el primer curso
-        });
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({
-            ok: false,
-            msg: "Error al buscar el curso",
-        });
-    }
-};
+//         return res.status(200).json({
+//             ok: true,
+//             data: data[0], // Enviar solo el primer curso
+//         });
+//     } catch (err) {
+//         console.error(err);
+//         return res.status(500).json({
+//             ok: false,
+//             msg: "Error al buscar el curso",
+//         });
+//     }
+// };
 
 
 

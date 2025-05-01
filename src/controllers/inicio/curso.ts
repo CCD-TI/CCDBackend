@@ -50,10 +50,12 @@ export const getcursodetalle = async (req = request, res = response) => {
     "cur"."IdCurso" AS "IdCurso",
     "cur"."Curso" AS "Curso",
     "tpo"."TipoCurso" AS "TipoCurso",
-    (SELECT
-      JSON_AGG(CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo"))
-    FROM "ProductoAdjunto" "pad"
-    WHERE "pad"."Curso_id" = "cur"."IdCurso"
+    (
+      SELECT JSON_AGG(
+        CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo")
+      )
+      FROM "ProductoAdjunto" "pad"
+      WHERE "pad"."Curso_id" = "cur"."IdCurso"
     ) AS "RutaImagen",
     (SELECT COUNT(*) FROM "ProductoTemario" WHERE "Curso_id" = "cur"."IdCurso") AS "CantidadModulos"
   FROM "Producto" "pro"
@@ -63,7 +65,6 @@ export const getcursodetalle = async (req = request, res = response) => {
   INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
   INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
   LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
-  LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
   LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
   WHERE "cur"."IdCurso" = :IdCurso
   GROUP BY
@@ -71,13 +72,9 @@ export const getcursodetalle = async (req = request, res = response) => {
     "esp"."Especializacion",
     "cur"."IdCurso",
     "cur"."Curso",
-    "tpo"."TipoCurso",
-    "pad"."Tipo1",
-    "pad"."Tipo2",
-    "pad"."Tipo3",
-    "pad"."Tipo4",
-    "pad"."NombreArchivo";
-  `;
+    "tpo"."TipoCurso";
+`;
+
   
   try {
     // Si el usuario no está definido, pasamos NULL en los reemplazos
