@@ -1190,13 +1190,10 @@ export const buscarCursosPorPalabra = async (req = request, res = response) => {
   }
 };
 
-export const vercursosespecializacionescuela = async (
-  req = request,
-  res = response
-) => {
-  const { Escuela, T1, T2, T3, T4, Usuario } = req.body;
+export const vercursosespecializacionescuela = async (req = request, res = response) => {
+  const { Escuela, T1, T2, T3, T4, Usuario, cursosFijos = [3, 5, 6, 10, 14, 15, 31, 35, 36] } = req.body;
   
-  // Modificamos la consulta SQL para manejar el caso cuando Usuario no está presente
+  // Modificamos la consulta SQL para ordenar primero los cursos fijos
   const sql = `
     SELECT
       JSON_AGG(
@@ -1208,8 +1205,8 @@ export const vercursosespecializacionescuela = async (
           'YaTieneCurso', (
             CASE WHEN :Usuario IS NULL THEN FALSE
                  WHEN EXISTS (
-                   SELECT 1 
-                   FROM "ProductoStock" "ps"
+                   SELECT 1
+                    FROM "ProductoStock" "ps"
                    WHERE "ps"."Producto_id" = "pro"."IdProducto"
                    AND "ps"."Usuario_id" = :Usuario
                  ) THEN TRUE ELSE FALSE END
@@ -1234,7 +1231,8 @@ export const vercursosespecializacionescuela = async (
       "cur"."Curso" AS "Curso",
       "tpo"."TipoCurso" AS "TipoCurso",
       CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo") AS "RutaImagen",
-      (SELECT COUNT(*) FROM "ProductoTemario" WHERE "Curso_id" = "cur"."IdCurso") AS "CantidadModulos"
+      (SELECT COUNT(*) FROM "ProductoTemario" WHERE "Curso_id" = "cur"."IdCurso") AS "CantidadModulos",
+      CASE WHEN "cur"."IdCurso" = ANY(ARRAY[:cursosFijos]::integer[]) THEN TRUE ELSE FALSE END AS "EsCursoFijo"
     FROM "Producto" "pro"
     INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
     INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
@@ -1262,6 +1260,9 @@ export const vercursosespecializacionescuela = async (
       "pad"."Tipo3",
       "pad"."Tipo4",
       "pad"."NombreArchivo"
+    ORDER BY 
+      CASE WHEN "cur"."IdCurso" = ANY(ARRAY[:cursosFijos]::integer[]) THEN 0 ELSE 1 END,
+      "cur"."IdCurso"
   `;
 
   try {
@@ -1269,13 +1270,14 @@ export const vercursosespecializacionescuela = async (
     const usuarioValue = Usuario || null;
     
     const data = await db.query(sql, {
-      replacements: { 
-        Escuela, 
-        T1, 
-        T2, 
-        T3, 
-        T4, 
-        Usuario: usuarioValue 
+      replacements: {
+        Escuela,
+        T1,
+        T2,
+        T3,
+        T4,
+        Usuario: usuarioValue,
+        cursosFijos: cursosFijos.length > 0 ? cursosFijos : [0] // Para evitar errores si el array está vacío
       },
     });
     
