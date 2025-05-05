@@ -185,7 +185,11 @@ import {
     CompraMembresiasProfesional,
     CompraMembresiasPremium,
     ExtenderMembresia,
-    UsuariosData
+    UsuariosData,
+    CompraCuotas,
+    SubirDocumentoUsuario,
+    obtenerPagosQR,
+    actualizarEstadoPagoQR
 } from '../controllers/inicio/producto';
 
 
@@ -972,6 +976,14 @@ router.post('/ExtenderMembresia',ExtenderMembresia)
 
 router.post('/getcursoProfesional', getcursoProfesional)
 router.post('/getcursosavCarrusel', getcursosavCarrusel)
+
+// compra en cuotas
+
+router.post('/CompraCuotas', CompraCuotas)
+router.post('/obtenerPagosQR', obtenerPagosQR)
+router.post('/actualizarEstadoPagoQR', actualizarEstadoPagoQR )
+router.post('/SubirDocumentoUsuario', upload.single('inputFile'), SubirDocumentoUsuario);
+
 
 /// Pruebas cron
 

@@ -3,6 +3,9 @@ import formidable, { Fields, Files } from 'formidable';
 import fs from 'fs';
 import * as XLSX from 'xlsx';
 import path from 'path';
+import AWS from 'aws-sdk';
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 import db from "../../db/connection";
 import ExcelJS from "exceljs";
 import { QueryTypes } from "sequelize";
@@ -20,6 +23,91 @@ import { KJUR } from "jsrsasign";
 interface RegistroVentaResult {
     IdRegistroVenta: number;
 }
+
+const storage = multer.memoryStorage();
+export const upload = multer({ storage });
+
+// Configurar S3 (R2)
+const s3 = new AWS.S3({
+    endpoint: 'https://89b4390775d9ea636df759447986d2ae.r2.cloudflarestorage.com', // ⬅️ CAMBIAR
+    accessKeyId: '20e4131a97497061d7054092fe8476ad',
+    secretAccessKey: '7fd2dbe331022af532c52cfd2ad24ef7c08a71d9dfa3d9a63663fcb9756b6ac3',
+    region: 'auto',
+});
+
+export const SubirDocumentoUsuario = async (req = request, res = response) => {
+    const { fusuario_id, ftelefono,fcursoId } = req.body;
+    const file = req.file;
+
+    if (!fusuario_id || !ftelefono || !file) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'Datos incompletos. Debe enviar usuario_id, telefono y un archivo.',
+        });
+    }
+
+    try {
+        // Generar nombre del archivo
+        const extension = file.originalname.split('.').pop();
+        const filename = `EGP/IMAGEN/Home/usuariosQR/${fusuario_id}.${extension}`;
+
+        // Subir a R2
+        const uploadParams = {
+            Bucket: 'ccd-storage', // ← nombre exacto de su bucket
+            Key: filename, // ← ruta completa dentro del bucket
+            Body: file.buffer,
+            ContentType: file.mimetype,
+            ACL: 'public-read', // si quiere que sea accesible públicamente
+        };
+
+        const uploadResult = await s3.upload(uploadParams).promise();
+
+        const urlImagen = uploadResult.Location;
+
+        // Insertar en la base de datos
+        const sqlInsert = `
+        INSERT INTO "PagosImgQR" (
+            "UsuarioId",
+            "Curso",
+            "Telefono",
+            "RutaImagen",
+            "Status",
+            "UserUpdatedAt"
+        ) VALUES (
+            :usuarioId,
+            :archer,
+            :telefono,
+            :urlImagen,
+            'pendiente',
+            'sistemas'
+        );
+    `;
+    
+    await db.query(sqlInsert, {
+        replacements: {
+            usuarioId: fusuario_id,
+            telefono: ftelefono,
+            urlImagen: filename,
+            archer: fcursoId
+        },
+    });
+    
+
+        return res.status(200).json({
+            ok: true,
+            msg: 'Imagen subida y datos guardados correctamente.',
+            url: urlImagen,
+        });
+
+    } catch (error) {
+        console.error('Error al subir o guardar datos:', error);
+        return res.status(500).json({
+            ok: false,
+            msg: 'Error interno al procesar la solicitud.',
+        });
+    }
+};
+
 
 export const loginUsuario = async (req = request, res = response) => {
     const { pUsuario, pClave } = req.body;
@@ -3559,7 +3647,7 @@ export const listarcursoxusuariov2 = async (req = request, res = response) => {
     const consultaPremium = `SELECT "Premium" FROM "Usuario" WHERE "IdUsuario" = ${fusuario_id}`;
 
     try {
-        const [resultado]:any  = await db.query(consultaPremium);
+        const [resultado]: any = await db.query(consultaPremium);
         const esPremium = resultado?.[0]?.Premium;
 
         const condicionJoinStock = esPremium
@@ -5712,6 +5800,94 @@ export const asignarcursoadminv2 = async (req = request, res = response) => {
         });
     }
 };
+
+
+export const CompraCuotas = async (req = request, res = response) => {
+    const { fproducto_id, fusuario_id, fprecio, numCuotas } = req.body;  // Ahora recibimos el número de cuotas
+
+    // Validar si el usuario ya tiene el curso
+    const sqlValidar = `
+        SELECT COUNT(*) AS count FROM "ProductoStock"
+        WHERE "Usuario_id" = :usuarioId AND "Producto_id" = :productoId
+    `;
+
+    try {
+        const resultado: any = await db.query(sqlValidar, {
+            replacements: { usuarioId: fusuario_id, productoId: fproducto_id },
+        });
+
+        if (resultado[0][0].count > 0) {
+            return res.status(400).json({
+                ok: false,
+                msg: "El usuario ya tiene asignado este curso.",
+            });
+        }
+
+        // Insertar el curso en la tabla "RegistroVenta"
+        const sqlInsertVenta = `
+        INSERT INTO "RegistroVenta" ("Usuario_id", "Producto_id", "PrecioVenta", "FechaCompra")
+        VALUES (:usuarioId, :productoId, :precio, CURRENT_TIMESTAMP)
+        RETURNING "IdRegistroVenta" AS "IdRegistroVenta"
+    `;
+        const [resultVenta]: any = await db.query(sqlInsertVenta, {
+            replacements: { usuarioId: fusuario_id, productoId: fproducto_id, precio: fprecio },
+        });
+        const idRegistroVenta = resultVenta[0].IdRegistroVenta;
+
+        // Insertar en ProductoStock utilizando el ID obtenido en RegistroVenta
+        const sqlInsertStock = `
+        INSERT INTO "ProductoStock" ("Usuario_id", "Producto_id", "StockDisponible", "RegistroVenta_id" ,"MetododeCompra")
+        VALUES (:usuarioId, :productoId, 1, :registroVentaId,'Cuotas')
+    `;
+        await db.query(sqlInsertStock, {
+            replacements: { usuarioId: fusuario_id, productoId: fproducto_id, registroVentaId: idRegistroVenta },
+        });
+
+        // Obtener la fecha actual para usar como fecha de compra
+        let fechaCompra = new Date();
+        let fechaLimite = new Date(fechaCompra); // Clonamos la fecha de compra
+        let cuotasPromises = [];
+
+        const cuotaAmount = fprecio / numCuotas;  // El monto de cada cuota es el precio total dividido entre el número de cuotas
+
+        for (let i = 1; i <= numCuotas; i++) {
+            // Añadir un mes a la fecha de vencimiento para cada cuota
+            fechaLimite.setMonth(fechaLimite.getMonth() + 1);
+            const fechaLimiteStr = fechaLimite.toISOString().split('T')[0];  // Formato YYYY-MM-DD
+
+            // Insertar cada cuota
+            const sqlInsertCuota = `
+                INSERT INTO "CUOTAS" ("PRODUCTO_USUARIO_ID", "NUMERO_CUOTA", "MONTO", "FECHA_LIMITE", "PAGADO", "FECHA_PAGO")
+                VALUES (:productoUsuarioId, :numeroCuota, :monto, :fechaLimite, FALSE, NULL)
+            `;
+            cuotasPromises.push(
+                db.query(sqlInsertCuota, {
+                    replacements: {
+                        productoUsuarioId: fproducto_id,  // Usamos el ID del producto como referencia
+                        numeroCuota: i,
+                        monto: cuotaAmount,
+                        fechaLimite: fechaLimiteStr,
+                    },
+                })
+            );
+        }
+
+        // Esperamos a que todas las cuotas se inserten
+        await Promise.all(cuotasPromises);
+
+        return res.status(200).json({
+            ok: true,
+            msg: "Curso asignado correctamente con las cuotas.",
+        });
+    } catch (err) {
+        console.error("Error al asignar curso:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "Error al asignar curso.",
+        });
+    }
+};
+
 
 export const acreditacionescertificadosv2 = async (
     req = request,
@@ -9148,6 +9324,62 @@ export const UsuariosData = async (req = request, res = response) => {
 
 }
 
+
+// QR dasboard endpoint
+
+export const obtenerPagosQR = async (req = request, res = response) => {
+    const sql = `
+        SELECT 
+            "Id",
+            "UsuarioId",
+            "Curso",
+            "Telefono",
+            "RutaImagen",
+            "FechaPago",
+            "Status"
+        FROM "PagosImgQR"
+        ORDER BY "FechaPago" DESC
+    `;
+
+    try {
+        const data: any = await db.query(sql, {});
+        return res.status(200).json({
+            ok: true,
+            msg: "Pagos QR cargados correctamente",
+            data: data[0], // solo los resultados
+        });
+    } catch (err) {
+        console.error("Error al obtener pagos QR:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "Error al consultar la base de datos",
+        });
+    }
+};
+
+export const actualizarEstadoPagoQR = async (req = request, res = response) => {
+    const {id, status } = req.body;
+
+    const sql = `
+        UPDATE "PagosImgQR" 
+        SET "Status" = '${status}'
+        WHERE "Id" = ${id}
+    `;
+
+    try {
+        await db.query(sql, {});
+        return res.status(200).json({
+            ok: true,
+            msg: "Estado actualizado correctamente",
+        });
+    } catch (err) {
+        console.error("Error al actualizar estado:", err);
+        return res.status(400).json({
+            ok: false,
+            msg: "No se pudo actualizar el estado del pago",
+        });
+    }
+};
 
 
 
