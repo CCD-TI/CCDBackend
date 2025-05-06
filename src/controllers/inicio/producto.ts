@@ -49,7 +49,7 @@ export const SubirDocumentoUsuario = async (req = request, res = response) => {
     try {
         // Generar nombre del archivo
         const extension = file.originalname.split('.').pop();
-        const filename = `EGP/IMAGEN/Home/usuariosQR/${fusuario_id}.${extension}`;
+        const filename = `EGP/IMAGEN/Home/usuariosQR/${uuidv4()}.${extension}`;
 
         // Subir a R2
         const uploadParams = {
@@ -78,7 +78,7 @@ export const SubirDocumentoUsuario = async (req = request, res = response) => {
             :archer,
             :telefono,
             :urlImagen,
-            'pendiente',
+            'Pendiente',
             'sistemas'
         );
     `;
@@ -4479,45 +4479,52 @@ export const listarencuestasalumnoobligatoriov2 = async (
 export const responderencuestav2 = async (req = request, res = response) => {
     const { fusuario_id, fencuesta_id, frespuestas, fproducto_id } = req.body;
 
-    // Consulta SQL para insertar en EncuestaRespondida
-    const sql = `
-        INSERT INTO "EncuestaRespondida"("Encuesta_id","Producto_id", "Usuario_id") 
-        VALUES (${fencuesta_id}, ${fproducto_id}, ${fusuario_id}) 
-        RETURNING "IdEncuestaRespondida"
-    `;
-
     try {
+        // Consulta SQL para insertar en EncuestaRespondida SIN especificar IdEncuestaRespondida
+        const sql = `
+            INSERT INTO "EncuestaRespondida"("Encuesta_id", "Producto_id", "Usuario_id") 
+            VALUES (${fencuesta_id}, ${fproducto_id}, ${fusuario_id}) 
+            RETURNING "IdEncuestaRespondida"
+        `;
+
         // Ejecutar la primera consulta para obtener "IdEncuestaRespondida"
         const rows: any = await db.query(sql);
         const encuestaRespondidaId = rows[0][0].IdEncuestaRespondida;
 
-        // Generar los valores dinámicos para la segunda inserción
-        const valores = Object.entries(frespuestas)
-            .filter(([_, respuesta]) => respuesta !== false) // Filtrar respuestas válidas
-            .map(
-                ([preguntaId, respuesta]) =>
-                    `(${preguntaId}, ${encuestaRespondidaId}, '${respuesta}')`
-            )
-            .join(", ");
+        // Verificar si hay respuestas para insertar
+        if (Object.keys(frespuestas).length > 0) {
+            // Generar los valores dinámicos para la segunda inserción
+            const valores = Object.entries(frespuestas)
+                .filter(([_, respuesta]) => respuesta !== false) // Filtrar respuestas válidas
+                .map(
+                    ([preguntaId, respuesta]) =>
+                        `(${preguntaId}, ${encuestaRespondidaId}, '${respuesta}')`
+                )
+                .join(", ");
 
-        // Consulta SQL para insertar en EncuestaRespuesta
-        const sql1 = `
-            INSERT INTO "EncuestaRespuesta"("EncuestaPregunta_id", "EncuestaRespondida_id", "Respuesta") 
-            VALUES ${valores}
-        `;
+            // Solo ejecutar la inserción si hay valores para insertar
+            if (valores.length > 0) {
+                // Consulta SQL para insertar en EncuestaRespuesta
+                const sql1 = `
+                    INSERT INTO "EncuestaRespuesta"("EncuestaPregunta_id", "EncuestaRespondida_id", "Respuesta") 
+                    VALUES ${valores}
+                `;
 
-        // Ejecutar la consulta de inserción
-        await db.query(sql1);
+                // Ejecutar la consulta de inserción
+                await db.query(sql1);
+            }
+        }
 
         return res.status(200).json({
             ok: true,
             msg: "Encuesta respondida con éxito",
         });
-    } catch (err) {
+    } catch (err:any) {
         console.error(err);
         return res.status(400).json({
             ok: false,
             msg: "Error al procesar la encuesta",
+            error: err.message
         });
     }
 };
@@ -6341,115 +6348,139 @@ export const listarcertificadoacreditaciones = async (
 ) => {
     const { fusuario_id, fproducto_id } = req.body; // fdata es un array con los datos a insertar.
 
+    const consultaPremium = `SELECT "Premium" FROM "Usuario" WHERE "IdUsuario" = ${fusuario_id}`;
+
+   
+        const [resultado]: any = await db.query(consultaPremium);
+        const esPremium = resultado?.[0]?.Premium;
+
+        const condicionJoinStock = esPremium
+            ? '' // No filtrar por ProductoStock si es premium
+            : 'INNER JOIN "ProductoStock" pst ON pst."Producto_id" = pro."IdProducto"';
+
+        const condicionWhereStock = esPremium
+            ? ''
+            : `pst."Usuario_id" = 25 AND" = ${fusuario_id}`;
     const sql = `
   WITH ProfesoresProcesados AS (
-        SELECT
-            "pro"."IdProducto",
-            UNNEST(string_to_array(MAX("pat"."Profesores"), ',')::int[]) AS "ProfesorId"
-        FROM "Producto" "pro"
-        LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "pro"."Curso_id"
-        GROUP BY "pro"."IdProducto"
-    )
     SELECT
-        SUM(
+        "pro"."IdProducto",
+        UNNEST(string_to_array(MAX("pat"."Profesores"), ',')::int[]) AS "ProfesorId"
+    FROM "Producto" "pro"
+    LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "pro"."Curso_id"
+    GROUP BY "pro"."IdProducto"
+)
+SELECT
+    SUM(
         CASE 
             WHEN tmo."TipoModalidad" = 'En Vivo' 
-            THEN (SELECT count(distinct ev."IdEvaluacion")
-                  FROM "Evaluacion" ev
-                  LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
-                  WHERE ev."Curso_id" = cur."IdCurso"
-                  AND evn."IdEvaluacionNota" IS NOT NULL 
-                  AND evn."Sala_id" = sa."IdSala"
-                  AND evn."Usuario_id"=${fusuario_id})
+            THEN (
+                SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                FROM "Evaluacion" ev
+                LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                WHERE ev."Curso_id" = cur."IdCurso"
+                AND evn."IdEvaluacionNota" IS NOT NULL 
+                AND evn."Sala_id" = sa."IdSala"
+                AND evn."Usuario_id" = 25
+            )
             WHEN tmo."TipoModalidad" = 'Asincrónico' 
-            THEN (SELECT count(distinct ev."IdEvaluacion")
-                  FROM "Evaluacion" ev
-                  LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
-                  WHERE ev."Curso_id" = cur."IdCurso"
-                  AND evn."IdEvaluacionNota" IS NOT NULL 
-                  AND evn."Sala_id" IS NULL
-                   AND evn."Usuario_id"=${fusuario_id})
+            THEN (
+                SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                FROM "Evaluacion" ev
+                LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                WHERE ev."Curso_id" = cur."IdCurso"
+                AND evn."IdEvaluacionNota" IS NOT NULL 
+                AND evn."Sala_id" IS NULL
+                AND evn."Usuario_id" = 25
+            )
             ELSE 0
         END
-    )+( SELECT COUNT(DISTINCT e."IdEncuesta")
-               FROM "Encuesta" e
-               LEFT JOIN "EncuestaRespondida" er 
-                 ON er."Encuesta_id" = e."IdEncuesta"
-               WHERE er."Producto_id" ="pro"."IdProducto" and er."Usuario_id"=${fusuario_id}) AS "Progreso",
-    
-        (
-            SELECT COUNT(*)
-            FROM "Evaluacion" eval
-            WHERE eval."Curso_id" =  cur."IdCurso"
-        ) +
-        (
-            SELECT COUNT(*)
-            FROM "Encuesta"
-        ) AS "ProgresoTotal",
-        JSON_AGG(
-            JSON_BUILD_OBJECT(
-                'TipoModalidad', "tmo"."TipoModalidad",
-                'IdProducto', "pro"."IdProducto",
-                'Sala', "sa"."Sala"
-            )
-        ) AS "Productos",
-        (
-            SELECT JSON_AGG("RutaImagenPerfil")
-            FROM "Usuario"
-            WHERE "IdUsuario" IN (
-                SELECT "ProfesorId"
-                FROM ProfesoresProcesados pp
-                WHERE pp."IdProducto" = "pro"."IdProducto"
-            )
-        ) AS "RutaImagenPerfil",
-    (select Count(*) from "SalaUsuario" where "Usuario_id"=${fusuario_id}  and "Sala_id"=MAX("sa"."IdSala")) as "Inscrito",
-        MAX(pat."Descripcion") AS "Descripcion",
-        MAX(pat."Calificacion") AS "Calificacion",
-        MAX(pat."Seguidores") AS "Seguidores",
-        MAX(pat."Nivel") AS "Nivel",
-        MAX(pat."MarcasRespaldo") AS "MarcasRespaldo",
-        MAX(pat."ExamenParcial") AS "ExamenParcial",
-        MAX(pat."ExamenFinal") AS "ExamenFinal",
-        MAX(pat."Profesores") AS "Profesores",
-        MAX(pat."Frecuencia") AS "Frecuencia",
-        MAX(pat."HorasAcademicas") AS "HorasAcademicas",
-        MAX(pat."Estado_id") AS "Estado_id",
-        MAX(pat."UltimaFechMod") AS "UltimaFechMod",
-        CONCAT(
-                    '/', COALESCE(pad."Tipo1", ''), 
-                    '/', COALESCE(pad."Tipo2", ''), 
-                    '/', COALESCE(pad."Tipo3", ''), 
-                    '/', COALESCE(pad."Tipo4", ''), 
-                    '/', COALESCE(pad."NombreArchivo", '')) as "RutaImagen",
-        "Escuela",
-        "Especializacion",
-        "IdCurso",
-        "Curso",
-        "TipoCurso",
-        "pro"."IdProducto"
-    FROM "Producto" "pro"
-    INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
-    INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
-    INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
-    INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
-    LEFT JOIN "ProductoAdjunto" "pad" ON "pad"."Curso_id" = "cur"."IdCurso"
-    LEFT JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
-    INNER JOIN "ProductoStock" "pst" ON "pst"."Producto_id" = "pro"."IdProducto"
-    INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
-    LEFT JOIN "Sala" "sa" ON "sa"."Producto_id" = "pro"."IdProducto"
-    WHERE "pst"."Usuario_id" = ${fusuario_id} and "pro"."IdProducto"=${fproducto_id}
-    GROUP BY
-        "Escuela",
-        "Especializacion",
-        "IdCurso",
-        "Curso",
-        "TipoCurso",
-        "pro"."IdProducto",
-        pad."Tipo1",
-        pad."Tipo2",
-        pad."Tipo3",
-        pad."Tipo4",
-        pad."NombreArchivo";
+    ) +
+    (
+        SELECT COUNT(DISTINCT e."IdEncuesta")
+        FROM "Encuesta" e
+        LEFT JOIN "EncuestaRespondida" er ON er."Encuesta_id" = e."IdEncuesta"
+        WHERE er."Producto_id" = pro."IdProducto" AND er."Usuario_id" = 25
+    ) AS "Progreso",
+    (
+        SELECT COUNT(*)
+        FROM "Evaluacion" eval
+        WHERE eval."Curso_id" = cur."IdCurso"
+    ) +
+    (
+        SELECT COUNT(*)
+        FROM "Encuesta"
+    ) AS "ProgresoTotal",
+    JSON_AGG(
+        JSON_BUILD_OBJECT(
+            'TipoModalidad', tmo."TipoModalidad",
+            'IdProducto', pro."IdProducto",
+            'Sala', sa."Sala"
+        )
+    ) AS "Productos",
+    (
+        SELECT JSON_AGG("RutaImagenPerfil")
+        FROM "Usuario"
+        WHERE "IdUsuario" IN (
+            SELECT "ProfesorId"
+            FROM ProfesoresProcesados pp
+            WHERE pp."IdProducto" = pro."IdProducto"
+        )
+    ) AS "RutaImagenPerfil",
+    (
+        SELECT COUNT(*)
+        FROM "SalaUsuario"
+        WHERE "Usuario_id" = 25 AND "Sala_id" = sa."IdSala"
+    ) AS "Inscrito",
+    MAX(pat."Descripcion") AS "Descripcion",
+    MAX(pat."Calificacion") AS "Calificacion",
+    MAX(pat."Seguidores") AS "Seguidores",
+    MAX(pat."Nivel") AS "Nivel",
+    MAX(pat."MarcasRespaldo") AS "MarcasRespaldo",
+    MAX(pat."ExamenParcial") AS "ExamenParcial",
+    MAX(pat."ExamenFinal") AS "ExamenFinal",
+    MAX(pat."Profesores") AS "Profesores",
+    MAX(pat."Frecuencia") AS "Frecuencia",
+    MAX(pat."HorasAcademicas") AS "HorasAcademicas",
+    MAX(pat."Estado_id") AS "Estado_id",
+    MAX(pat."UltimaFechMod") AS "UltimaFechMod",
+    CONCAT(
+        '/', COALESCE(pad."Tipo1", ''), 
+        '/', COALESCE(pad."Tipo2", ''), 
+        '/', COALESCE(pad."Tipo3", ''), 
+        '/', COALESCE(pad."Tipo4", ''), 
+        '/', COALESCE(pad."NombreArchivo", '')
+    ) AS "RutaImagen",
+    "Escuela",
+    "Especializacion",
+    "IdCurso",
+    "Curso",
+    "TipoCurso",
+    pro."IdProducto"
+FROM "Producto" pro
+INNER JOIN "Curso" cur ON cur."IdCurso" = pro."Curso_id"
+INNER JOIN "Especializacion" esp ON esp."IdEspecializacion" = cur."Especializacion_id"
+INNER JOIN "Escuela" esc ON esc."IdEscuela" = esp."Escuela_id"
+INNER JOIN "TipoCurso" tpo ON tpo."IdTipoCurso" = cur."TipoCurso_id"
+LEFT JOIN "ProductoAdjunto" pad ON pad."Curso_id" = cur."IdCurso"
+LEFT JOIN "ProductoAtributo" pat ON pat."Curso_id" = cur."IdCurso"
+${condicionJoinStock}
+INNER JOIN "TipoModalidad" tmo ON tmo."IdTipoModalidad" = pro."TipoModalidad_id"
+LEFT JOIN "Sala" sa ON sa."Producto_id" = pro."IdProducto"
+WHERE ${condicionWhereStock} pro."IdProducto" = 22
+GROUP BY
+    "Escuela",
+    "Especializacion",
+    "IdCurso",
+    "Curso",
+    "TipoCurso",
+    pro."IdProducto",
+    pad."Tipo1",
+    pad."Tipo2",
+    pad."Tipo3",
+    pad."Tipo4",
+    pad."NombreArchivo",
+    sa."IdSala";
 
 
     `;
@@ -9329,16 +9360,20 @@ export const UsuariosData = async (req = request, res = response) => {
 
 export const obtenerPagosQR = async (req = request, res = response) => {
     const sql = `
-        SELECT 
-            "Id",
-            "UsuarioId",
-            "Curso",
-            "Telefono",
-            "RutaImagen",
-            "FechaPago",
-            "Status"
-        FROM "PagosImgQR"
-        ORDER BY "FechaPago" DESC
+       SELECT 
+            p."Id",
+            p."UsuarioId",
+            p."Curso",
+            p."Telefono",
+            p."RutaImagen",
+            p."FechaPago",
+            p."Status",
+            e."Nombres" AS "NombresEntidad",
+            e."Apellidos" AS "ApellidosEntidad"
+        FROM "PagosImgQR" p
+        JOIN "Usuario" u ON p."UsuarioId" = u."IdUsuario"
+        JOIN "Entidad" e ON u."Entidad_id" = e."IdEntidad"
+        ORDER BY p."FechaPago" DESC;
     `;
 
     try {
