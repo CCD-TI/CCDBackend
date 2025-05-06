@@ -6360,7 +6360,7 @@ export const listarcertificadoacreditaciones = async (
 
         const condicionWhereStock = esPremium
             ? ''
-            : `pst."Usuario_id" = 25 AND" = ${fusuario_id}`;
+            : `pst."Usuario_id"  = ${fusuario_id} AND`;
     const sql = `
   WITH ProfesoresProcesados AS (
     SELECT
@@ -6381,7 +6381,7 @@ SELECT
                 WHERE ev."Curso_id" = cur."IdCurso"
                 AND evn."IdEvaluacionNota" IS NOT NULL 
                 AND evn."Sala_id" = sa."IdSala"
-                AND evn."Usuario_id" = 25
+                AND evn."Usuario_id" = ${fusuario_id}
             )
             WHEN tmo."TipoModalidad" = 'Asincrónico' 
             THEN (
@@ -6391,7 +6391,7 @@ SELECT
                 WHERE ev."Curso_id" = cur."IdCurso"
                 AND evn."IdEvaluacionNota" IS NOT NULL 
                 AND evn."Sala_id" IS NULL
-                AND evn."Usuario_id" = 25
+                AND evn."Usuario_id" = ${fusuario_id}
             )
             ELSE 0
         END
@@ -6400,7 +6400,7 @@ SELECT
         SELECT COUNT(DISTINCT e."IdEncuesta")
         FROM "Encuesta" e
         LEFT JOIN "EncuestaRespondida" er ON er."Encuesta_id" = e."IdEncuesta"
-        WHERE er."Producto_id" = pro."IdProducto" AND er."Usuario_id" = 25
+        WHERE er."Producto_id" = pro."IdProducto" AND er."Usuario_id" = ${fusuario_id}
     ) AS "Progreso",
     (
         SELECT COUNT(*)
@@ -6430,7 +6430,7 @@ SELECT
     (
         SELECT COUNT(*)
         FROM "SalaUsuario"
-        WHERE "Usuario_id" = 25 AND "Sala_id" = sa."IdSala"
+        WHERE "Usuario_id" = ${fusuario_id} AND "Sala_id" = sa."IdSala"
     ) AS "Inscrito",
     MAX(pat."Descripcion") AS "Descripcion",
     MAX(pat."Calificacion") AS "Calificacion",
@@ -6467,7 +6467,7 @@ LEFT JOIN "ProductoAtributo" pat ON pat."Curso_id" = cur."IdCurso"
 ${condicionJoinStock}
 INNER JOIN "TipoModalidad" tmo ON tmo."IdTipoModalidad" = pro."TipoModalidad_id"
 LEFT JOIN "Sala" sa ON sa."Producto_id" = pro."IdProducto"
-WHERE ${condicionWhereStock} pro."IdProducto" = 22
+WHERE ${condicionWhereStock} pro."IdProducto" = ${fproducto_id}
 GROUP BY
     "Escuela",
     "Especializacion",
