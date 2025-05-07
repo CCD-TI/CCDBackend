@@ -2920,7 +2920,7 @@ export const listarespecializacionxescuelav2 = async (
     // Ajusta la consulta SQL a tus necesidades
     const sql = `
         SELECT * FROM "Especializacion" "esp"
-        where "esp"."Escuela_id"=${fescuela_id}
+        where "esp"."Escuela_id"=1
         `;
 
     try {
@@ -4702,8 +4702,8 @@ export const vercursosplataformatiendaxtop1v2 = async (req = request, res = resp
     const sql = `
 WITH ProductosNumerados AS (
     SELECT 
-        "tmo"."TipoModalidad", 
-        "pro"."IdProducto", 
+        "tmo"."TipoModalidad",
+        "pro"."IdProducto",
         "ppr"."Precio",
         "pat"."Descripcion",
         "pat"."Calificacion",
@@ -4725,17 +4725,19 @@ WITH ProductosNumerados AS (
         "cur"."IdCurso",
         "cur"."Curso",
         "tpo"."TipoCurso",
-        -- Usamos STRING_AGG para concatenar las rutas en una cadena separada por comas y envolvemos cada ruta con comillas dobles
-        (SELECT 
-            STRING_AGG('"' || CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo") || '"', ',')
-         FROM "ProductoAdjunto" "pad"
-         WHERE "pad"."Curso_id" = "cur"."IdCurso"
+        (SELECT
+            JSON_AGG(
+                CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo")
+                ORDER BY "pad"."IdProductoAdjunto"
+            )
+        FROM "ProductoAdjunto" "pad"
+        WHERE "pad"."Curso_id" = "cur"."IdCurso"
         ) AS "RutaImagen",
-        (SELECT COUNT(*) 
-         FROM "ProductoTemario" 
+        (SELECT COUNT(*)
+         FROM "ProductoTemario"
          WHERE "Curso_id" = "cur"."IdCurso"
         ) AS "CantidadModulos",
-        ROW_NUMBER() OVER (PARTITION BY "esc"."IdEscuela" ORDER BY "pro"."IdProducto") AS rn -- Numeración de productos por escuela
+        ROW_NUMBER() OVER (PARTITION BY "esc"."IdEscuela" ORDER BY "pro"."IdProducto") AS rn
     FROM "Producto" "pro"
     INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
     INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
@@ -4773,20 +4775,20 @@ SELECT
     "IdCurso",
     "Curso",
     "TipoCurso",
-    -- Agregamos las rutas correctamente formateadas en JSON
-    '[' || STRING_AGG("RutaImagen", ',') || ']' AS "RutaImagen",  
+    (MAX("RutaImagen"::text))::json AS "RutaImagen",
     MAX("CantidadModulos") AS "CantidadModulos"
 FROM ProductosNumerados
-WHERE rn <= 4 and "IdEscuela" in (1,2,3) -- Limitamos a los primeros 4 productos por escuela
+WHERE rn <= 4 AND "IdEscuela" IN (1,2,3)
 GROUP BY 
-    "IdEscuela", 
-    "Escuela", 
-    "IdEspecializacion", 
-    "Especializacion", 
-    "IdCurso", 
-    "Curso", 
+    "IdEscuela",
+    "Escuela",
+    "IdEspecializacion",
+    "Especializacion",
+    "IdCurso",
+    "Curso",
     "TipoCurso"
 ORDER BY "IdEscuela";
+
 
     `;
 
