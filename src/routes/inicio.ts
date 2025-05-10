@@ -201,6 +201,7 @@ import { asignarxpago, getcursoHome, getcursoProfesional, getcursosavCarrusel, g
 import { actualizarEntidad, buscarCursosPorPalabra, escuelagetcursodetalle, frontgetcursodetalle, getcursodetalle, getcursoescuelaespecializacion, getcursosav, getcursosfull, getescuela } from '../controllers/inicio/curso';
 import Cron from '../controllers/cron/Cron';
 import { ObtenerFechaMembresia } from '../controllers/cron/Membresia';
+import AWS from 'aws-sdk';
 
 const rateLimit = require('express-rate-limit');
 
@@ -323,14 +324,21 @@ router.post('/listarevaluacionesxusuario', listarevaluacionesxusuario)
 router.post('/listarpreguntasxusuario', listarpreguntasxusuario)
 router.post('/GuardarDatosExamen', GuardarDatosExamen)
 
-export const r2 = new S3Client({
-    region: "auto",
-    endpoint: "https://89b4390775d9ea636df759447986d2ae.r2.cloudflarestorage.com",
-    credentials: {
-        accessKeyId: "565efaec224078967244d303913c30c2",
-        secretAccessKey: "e10217b0b75da1269dba95b90e280f686836e88bbffa1fe187f1a9361b7d131d"
-    }
-})
+// export const r2 = new S3Client({
+//     region: "auto",
+//     endpoint: "https://89b4390775d9ea636df759447986d2ae.r2.cloudflarestorage.com",
+//     credentials: {
+//         accessKeyId: "565efaec224078967244d303913c30c2",
+//         secretAccessKey: "e10217b0b75da1269dba95b90e280f686836e88bbffa1fe187f1a9361b7d131d"
+//     }
+// })
+
+export const r2 = new AWS.S3({
+    endpoint: 'https://89b4390775d9ea636df759447986d2ae.r2.cloudflarestorage.com', // ⬅️ CAMBIAR
+    accessKeyId: '20e4131a97497061d7054092fe8476ad',
+    secretAccessKey: '7fd2dbe331022af532c52cfd2ad24ef7c08a71d9dfa3d9a63663fcb9756b6ac3',
+    region: 'auto',
+});
 router.post('/listarreportesv2', listarreportesv2)
 router.post('/listarDocentes', listarDocentes)
 router.post('/listardocentesalav2', listardocentesalav2)
