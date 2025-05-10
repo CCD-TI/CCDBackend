@@ -523,50 +523,79 @@ router.post('/subirvideossala', upload.single('Dvideovivo'), async (req: Request
 
 router.post('/subircertificado', upload.single('Dvideovivo'), async (req: Request, res: Response) => {
     try {
-        const { pproducto_id, pusuario_id ,posicion} = req.body;
+        const { pproducto_id, pusuario_id, posicion } = req.body;
         const file = req.file;
-
-        if ( !file) {
+        
+        if (!file) {
             return res.status(400).json({ error: "Faltan datos requeridos o archivo" });
         }
-
-        const fileName =`/Multimedia/Imagen/Cursos/${posicion}/`+file.originalname;
-
-        // Verificar si ya existe el registro en la base de datos
-        const checkResult = await db.query(
-            `SELECT COUNT(*) as count FROM "Certificado" WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
-            {
-                replacements: { pusuario_id: pusuario_id, pproducto_id: pproducto_id },
-            }
-        );
-
-        const count = (checkResult[0][0] as any).count;
-        console.log(fileName)
-        console.log(count)
-        if(posicion=='CertificadoAdelante'){
-            await db.query(
-                `UPDATE "Certificado" 
-                SET "RutaImagenDelante" = :pname 
-                WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
-                {
-                    replacements: { pname:fileName,pusuario_id: pusuario_id, pproducto_id: pproducto_id },
-                }
-            );
-            return res.json({ message: "Archivo actualizado correctamente" });
-        }else{
-            await db.query(
-                `UPDATE "Certificado" 
-                SET "RutaImagenDetras" = :pname 
-                WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
-                {
-                    replacements: { pname:fileName,pusuario_id: pusuario_id, pproducto_id: pproducto_id },
-                }
-            );
-            return res.json({ message: "Archivo actualizado correctamente" });
-        }
         
+        // Generar nombre único para el archivo
+        const uniquePrefix = Date.now().toString(36) + Math.random().toString(36).substring(2);
+        const fileName = `Multimedia/Imagen/Cursos/${posicion}/${uniquePrefix}`;
+        
+        const uploadParams = {
+            Bucket: 'ccd-storage',
+            Key: fileName,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+            ACL: 'public-read'
+        };
+        
+        try {
+            // Subir el archivo a R2
+            await r2.upload(uploadParams).promise();
+            
+            // NO intentar generar URLs prefirmadas - este es el origen del error
+            // Simplemente usar la ruta del archivo para la base de datos
+            const rutaArchivo = `/${fileName}`;
+            
+            // Verificar si ya existe el registro en la base de datos
+            const checkResult = await db.query(
+                `SELECT COUNT(*) as count FROM "Certificado" WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
+                {
+                    replacements: { pusuario_id, pproducto_id },
+                     type: "SELECT"
+                }
+            );
+            
+            // const count = checkResult[0].count;
+            
+            // Actualizar la base de datos según la posición
+            if (posicion === 'CertificadoAdelante') {
+                await db.query(
+                    `UPDATE "Certificado" 
+                     SET "RutaImagenDelante" = :pname 
+                     WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
+                    {
+                        replacements: { pname: rutaArchivo, pusuario_id, pproducto_id },
+                         type: "UPDATE"
+                    }
+                );
+            } else {
+                await db.query(
+                    `UPDATE "Certificado" 
+                     SET "RutaImagenDetras" = :pname 
+                     WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
+                    {
+                        replacements: { pname: rutaArchivo, pusuario_id, pproducto_id },
+                         type: "UPDATE"
+                    }
+                );
+            }
+            
+            // Devolver una respuesta exitosa
+            return res.json({
+                message: "Archivo subido y actualizado correctamente",
+                ruta: rutaArchivo
+            });
+            
+        } catch (uploadError) {
+            console.error("Error al subir el archivo:", uploadError);
+            return res.status(500).json({ error: "Error al subir el archivo al almacenamiento" });
+        }
     } catch (error) {
-        console.error("Error en /subirvideossala:", error);
+        console.error("Error en /subircertificado:", error);
         return res.status(500).json({ error: "Error en el servidor" });
     }
 });
