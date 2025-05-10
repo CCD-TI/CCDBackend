@@ -3225,7 +3225,7 @@ export const listarevaluacionesnotaxusuariov2 = async (
 
     // Ajusta la consulta SQL a tus necesidades
     const sql = `
-         select "TipoEvaluacion","IdEvaluacion","eno"."IdEvaluacionNota","Nota","Intento",eno."Producto_id","Evaluacion","eva"."Duracion","eva"."Intentos" from "Evaluacion" "eva"
+         select "TipoEvaluacion","IdEvaluacion","eno"."IdEvaluacionNota","Nota","Intento",eno."Producto_id","Evaluacion","eva"."Duracion","eva"."Intentos" ,"eva"."Intentos"from "Evaluacion" "eva"
         inner join "EvaluacionNota" "eno"  on "eno"."Evaluacion_id"="eva"."IdEvaluacion"
         where "Usuario_id"=${fusuario_id}	and "IdEvaluacion"=${fevaluacion_id} and eno."Sala_id" is null
         `;
@@ -6364,6 +6364,7 @@ export const listarcertificadoacreditaciones = async (
             ? ''
             : `pst."Usuario_id"  = ${fusuario_id} AND`;
     const sql = `
+ 
   WITH ProfesoresProcesados AS (
     SELECT
         "pro"."IdProducto",
@@ -6373,36 +6374,119 @@ export const listarcertificadoacreditaciones = async (
     GROUP BY "pro"."IdProducto"
 )
 SELECT
-    SUM(
-        CASE 
-            WHEN tmo."TipoModalidad" = 'En Vivo' 
-            THEN (
-                SELECT COUNT(DISTINCT ev."IdEvaluacion")
-                FROM "Evaluacion" ev
-                LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
-                WHERE ev."Curso_id" = cur."IdCurso"
-                AND evn."IdEvaluacionNota" IS NOT NULL 
-                AND evn."Sala_id" = sa."IdSala"
-                AND evn."Usuario_id" = ${fusuario_id}
+    LEAST(
+        (
+            -- 45% para TipoEvaluacion = '1'
+            (
+                CASE 
+                    WHEN (
+                        SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                        FROM "Evaluacion" ev
+                        WHERE ev."Curso_id" = cur."IdCurso" AND ev."TipoEvaluacion" = '1'
+                    ) > 0 
+                    THEN (
+                        (
+                            SELECT COUNT(DISTINCT ev."IdEvaluacion") 
+                            FROM "Evaluacion" ev
+                            LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                            WHERE ev."Curso_id" = cur."IdCurso"
+                            AND evn."IdEvaluacionNota" IS NOT NULL 
+                            AND ev."TipoEvaluacion" ='1'
+                            AND (
+                                (tmo."TipoModalidad" = 'En Vivo' AND evn."Sala_id" = sa."IdSala")
+                                OR (tmo."TipoModalidad" = 'Asincrónico' AND evn."Sala_id" IS NULL)
+                            )
+                            AND evn."Usuario_id" = ${fusuario_id}
+                        ) * 1.0 / 
+                        NULLIF((
+                            SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                            FROM "Evaluacion" ev
+                            WHERE ev."Curso_id" = cur."IdCurso" AND ev."TipoEvaluacion" = '1'
+                        ), 0) * 45
+                    )
+                    ELSE 0
+                END
+            ) +
+            -- 50% para TipoEvaluacion = '2'
+            (
+                CASE 
+                    WHEN (
+                        SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                        FROM "Evaluacion" ev
+                        WHERE ev."Curso_id" = cur."IdCurso" AND ev."TipoEvaluacion" = '2'
+                    ) > 0 
+                    THEN (
+                        (
+                            SELECT COUNT(DISTINCT ev."IdEvaluacion") 
+                            FROM "Evaluacion" ev
+                            LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                            WHERE ev."Curso_id" = cur."IdCurso"
+                            AND evn."IdEvaluacionNota" IS NOT NULL 
+                            AND ev."TipoEvaluacion" = '2'
+                            AND (
+                                (tmo."TipoModalidad" = 'En Vivo' AND evn."Sala_id" = sa."IdSala")
+                                OR (tmo."TipoModalidad" = 'Asincrónico' AND evn."Sala_id" IS NULL)
+                            )
+                            AND evn."Usuario_id" = ${fusuario_id}
+                        ) * 1.0 / 
+                        NULLIF((
+                            SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                            FROM "Evaluacion" ev
+                            WHERE ev."Curso_id" = cur."IdCurso" AND ev."TipoEvaluacion" = '2'
+                        ), 0) * 50
+                    )
+                    ELSE 0
+                END
+            ) +
+            -- 5% para encuestas (si hay alguna completada)
+         (
+                CASE 
+                    WHEN (
+                        SELECT COUNT(DISTINCT e."IdEncuesta")
+                        FROM "Encuesta" e
+                        LEFT JOIN "EncuestaRespondida" er ON er."Encuesta_id" = e."IdEncuesta"
+                        WHERE er."Producto_id"::integer = pro."IdProducto" AND er."Usuario_id" = ${fusuario_id}
+                    ) > 0 
+                    THEN 5
+                    ELSE 0
+                END
             )
-            WHEN tmo."TipoModalidad" = 'Asincrónico' 
-            THEN (
-                SELECT COUNT(DISTINCT ev."IdEvaluacion")
-                FROM "Evaluacion" ev
-                LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
-                WHERE ev."Curso_id" = cur."IdCurso"
-                AND evn."IdEvaluacionNota" IS NOT NULL 
-                AND evn."Sala_id" IS NULL
-                AND evn."Usuario_id" = ${fusuario_id}
-            )
-            ELSE 0
-        END
-    ) +
+        ), 100
+    ) AS "PorcentajeProgreso",
     (
-        SELECT COUNT(DISTINCT e."IdEncuesta")
-        FROM "Encuesta" e
-        LEFT JOIN "EncuestaRespondida" er ON er."Encuesta_id" = e."IdEncuesta"
-        WHERE er."Producto_id" = pro."IdProducto" AND er."Usuario_id" = ${fusuario_id}
+        -- Mantener el campo "Progreso" original para compatibilidad
+        SELECT 
+            SUM(
+                CASE 
+                    WHEN tmo."TipoModalidad" = 'En Vivo' 
+                    THEN (
+                        SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                        FROM "Evaluacion" ev
+                        LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                        WHERE ev."Curso_id" = cur."IdCurso"
+                        AND evn."IdEvaluacionNota" IS NOT NULL 
+                        AND evn."Sala_id" = sa."IdSala"
+                        AND evn."Usuario_id" = ${fusuario_id}
+                    )
+                    WHEN tmo."TipoModalidad" = 'Asincrónico' 
+                    THEN (
+                        SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                        FROM "Evaluacion" ev
+                        LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                        WHERE ev."Curso_id" = cur."IdCurso"
+                        AND evn."IdEvaluacionNota" IS NOT NULL 
+                        AND evn."Sala_id" IS NULL
+                        AND evn."Usuario_id" = ${fusuario_id}
+                    )
+                    ELSE 0
+                END
+            ) +
+            (
+                SELECT COUNT(DISTINCT e."IdEncuesta")
+                FROM "Encuesta" e
+                LEFT JOIN "EncuestaRespondida" er ON er."Encuesta_id" = e."IdEncuesta"
+                WHERE er."Producto_id"::integer = pro."IdProducto" AND er."Usuario_id" = ${fusuario_id}
+            )
     ) AS "Progreso",
     (
         SELECT COUNT(*)
@@ -6469,7 +6553,7 @@ LEFT JOIN "ProductoAtributo" pat ON pat."Curso_id" = cur."IdCurso"
 ${condicionJoinStock}
 INNER JOIN "TipoModalidad" tmo ON tmo."IdTipoModalidad" = pro."TipoModalidad_id"
 LEFT JOIN "Sala" sa ON sa."Producto_id" = pro."IdProducto"
-WHERE ${condicionWhereStock} pro."IdProducto" = ${fproducto_id}
+WHERE ${condicionWhereStock}  pro."IdProducto" = ${fproducto_id}
 GROUP BY
     "Escuela",
     "Especializacion",
@@ -6482,7 +6566,8 @@ GROUP BY
     pad."Tipo3",
     pad."Tipo4",
     pad."NombreArchivo",
-    sa."IdSala";
+    sa."IdSala",
+    tmo."TipoModalidad";
 
 
     `;
