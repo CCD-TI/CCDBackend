@@ -189,7 +189,12 @@ import {
     CompraCuotas,
     SubirDocumentoUsuario,
     obtenerPagosQR,
-    actualizarEstadoPagoQR
+    actualizarEstadoPagoQR,
+    ListTipopago,
+    ListPlan,
+    AsignarMembresiasAdmin,
+    ListProductoStockUser,
+    UpdateProductoStockUser
 } from '../controllers/inicio/producto';
 
 
@@ -201,7 +206,6 @@ import { asignarxpago, getcursoHome, getcursoProfesional, getcursosavCarrusel, g
 import { actualizarEntidad, buscarCursosPorPalabra, escuelagetcursodetalle, frontgetcursodetalle, getcursodetalle, getcursoescuelaespecializacion, getcursosav, getcursosfull, getescuela } from '../controllers/inicio/curso';
 import Cron from '../controllers/cron/Cron';
 import { ObtenerFechaMembresia } from '../controllers/cron/Membresia';
-import AWS from 'aws-sdk';
 
 const rateLimit = require('express-rate-limit');
 
@@ -324,21 +328,14 @@ router.post('/listarevaluacionesxusuario', listarevaluacionesxusuario)
 router.post('/listarpreguntasxusuario', listarpreguntasxusuario)
 router.post('/GuardarDatosExamen', GuardarDatosExamen)
 
-// export const r2 = new S3Client({
-//     region: "auto",
-//     endpoint: "https://89b4390775d9ea636df759447986d2ae.r2.cloudflarestorage.com",
-//     credentials: {
-//         accessKeyId: "565efaec224078967244d303913c30c2",
-//         secretAccessKey: "e10217b0b75da1269dba95b90e280f686836e88bbffa1fe187f1a9361b7d131d"
-//     }
-// })
-
-export const r2 = new AWS.S3({
-    endpoint: 'https://89b4390775d9ea636df759447986d2ae.r2.cloudflarestorage.com', // ⬅️ CAMBIAR
-    accessKeyId: '20e4131a97497061d7054092fe8476ad',
-    secretAccessKey: '7fd2dbe331022af532c52cfd2ad24ef7c08a71d9dfa3d9a63663fcb9756b6ac3',
-    region: 'auto',
-});
+export const r2 = new S3Client({
+    region: "auto",
+    endpoint: "https://89b4390775d9ea636df759447986d2ae.r2.cloudflarestorage.com",
+    credentials: {
+        accessKeyId: "565efaec224078967244d303913c30c2",
+        secretAccessKey: "e10217b0b75da1269dba95b90e280f686836e88bbffa1fe187f1a9361b7d131d"
+    }
+})
 router.post('/listarreportesv2', listarreportesv2)
 router.post('/listarDocentes', listarDocentes)
 router.post('/listardocentesalav2', listardocentesalav2)
@@ -523,79 +520,50 @@ router.post('/subirvideossala', upload.single('Dvideovivo'), async (req: Request
 
 router.post('/subircertificado', upload.single('Dvideovivo'), async (req: Request, res: Response) => {
     try {
-        const { pproducto_id, pusuario_id, posicion } = req.body;
+        const { pproducto_id, pusuario_id ,posicion} = req.body;
         const file = req.file;
-        
-        if (!file) {
+
+        if ( !file) {
             return res.status(400).json({ error: "Faltan datos requeridos o archivo" });
         }
-        
-        // Generar nombre único para el archivo
-        const uniquePrefix = Date.now().toString(36) + Math.random().toString(36).substring(2);
-        const fileName = `Multimedia/Imagen/Cursos/${posicion}/${uniquePrefix}`;
-        
-        const uploadParams = {
-            Bucket: 'ccd-storage',
-            Key: fileName,
-            Body: file.buffer,
-            ContentType: file.mimetype,
-            ACL: 'public-read'
-        };
-        
-        try {
-            // Subir el archivo a R2
-            await r2.upload(uploadParams).promise();
-            
-            // NO intentar generar URLs prefirmadas - este es el origen del error
-            // Simplemente usar la ruta del archivo para la base de datos
-            const rutaArchivo = `/${fileName}`;
-            
-            // Verificar si ya existe el registro en la base de datos
-            const checkResult = await db.query(
-                `SELECT COUNT(*) as count FROM "Certificado" WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
+
+        const fileName =`/Multimedia/Imagen/Cursos/${posicion}/`+file.originalname;
+
+        // Verificar si ya existe el registro en la base de datos
+        const checkResult = await db.query(
+            `SELECT COUNT(*) as count FROM "Certificado" WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
+            {
+                replacements: { pusuario_id: pusuario_id, pproducto_id: pproducto_id },
+            }
+        );
+
+        const count = (checkResult[0][0] as any).count;
+        console.log(fileName)
+        console.log(count)
+        if(posicion=='CertificadoAdelante'){
+            await db.query(
+                `UPDATE "Certificado" 
+                SET "RutaImagenDelante" = :pname 
+                WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
                 {
-                    replacements: { pusuario_id, pproducto_id },
-                     type: "SELECT"
+                    replacements: { pname:fileName,pusuario_id: pusuario_id, pproducto_id: pproducto_id },
                 }
             );
-            
-            // const count = checkResult[0].count;
-            
-            // Actualizar la base de datos según la posición
-            if (posicion === 'CertificadoAdelante') {
-                await db.query(
-                    `UPDATE "Certificado" 
-                     SET "RutaImagenDelante" = :pname 
-                     WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
-                    {
-                        replacements: { pname: rutaArchivo, pusuario_id, pproducto_id },
-                         type: "UPDATE"
-                    }
-                );
-            } else {
-                await db.query(
-                    `UPDATE "Certificado" 
-                     SET "RutaImagenDetras" = :pname 
-                     WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
-                    {
-                        replacements: { pname: rutaArchivo, pusuario_id, pproducto_id },
-                         type: "UPDATE"
-                    }
-                );
-            }
-            
-            // Devolver una respuesta exitosa
-            return res.json({
-                message: "Archivo subido y actualizado correctamente",
-                ruta: rutaArchivo
-            });
-            
-        } catch (uploadError) {
-            console.error("Error al subir el archivo:", uploadError);
-            return res.status(500).json({ error: "Error al subir el archivo al almacenamiento" });
+            return res.json({ message: "Archivo actualizado correctamente" });
+        }else{
+            await db.query(
+                `UPDATE "Certificado" 
+                SET "RutaImagenDetras" = :pname 
+                WHERE "Usuario_id" = :pusuario_id AND "Producto_id" = :pproducto_id`,
+                {
+                    replacements: { pname:fileName,pusuario_id: pusuario_id, pproducto_id: pproducto_id },
+                }
+            );
+            return res.json({ message: "Archivo actualizado correctamente" });
         }
+        
     } catch (error) {
-        console.error("Error en /subircertificado:", error);
+        console.error("Error en /subirvideossala:", error);
         return res.status(500).json({ error: "Error en el servidor" });
     }
 });
@@ -1031,6 +999,15 @@ router.post('/ObtenerFechaMembresia', ObtenerFechaMembresia)
 //endpoint Usuarios
 
 router.post('/UsuariosData', UsuariosData)
+
+//endpoint Adminstrador
+
+router.get('/ListTipopago', ListTipopago)
+router.get('/ListPlan', ListPlan)
+router.post('/AsignarMembresiasAdmin', AsignarMembresiasAdmin)
+router.post('/ListProductoStockUser', ListProductoStockUser)
+router.put('/UpdateProductoStockUser', UpdateProductoStockUser)
+
 
 
 router.post('/vercursosplataformatiendaxtopv2', vercursosplataformatiendaxtopv2)

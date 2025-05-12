@@ -5758,7 +5758,7 @@ INSERT into "Certificado" ("CodigoCertificado","Usuario_id","Producto_id","Tipo"
 
 
 export const asignarcursoadminv2 = async (req = request, res = response) => {
-    const { fproducto_id, fusuario_id, fprecio } = req.body;
+    const { fproducto_id, ftipoPago,fusuario_id, fprecio , fUserMod } = req.body;
 
     // Validar si el usuario ya tiene el curso
     const sqlValidar = `
@@ -5783,18 +5783,21 @@ export const asignarcursoadminv2 = async (req = request, res = response) => {
         const sqlInsertVenta = `
             INSERT INTO "RegistroVenta" ("Usuario_id","Producto_id","PrecioVenta","FechaCompra")
             VALUES (:usuarioId, :productoId, :precio, CURRENT_TIMESTAMP)
+             RETURNING "IdRegistroVenta"
         `;
-        await db.query(sqlInsertVenta, {
+        const result = await db.query(sqlInsertVenta, {
             replacements: { usuarioId: fusuario_id, productoId: fproducto_id, precio: fprecio },
-        });
+            
+        })as any;
+        const idVenta = result[0][0].IdRegistroVenta;
 
         // Insertar el stock del producto
         const sqlInsertStock = `
-            INSERT INTO "ProductoStock" ("Usuario_id", "Producto_id", "StockDisponible")
-            VALUES (:usuarioId, :productoId, 1)
+            INSERT INTO "ProductoStock" ("Usuario_id", "Producto_id", "StockDisponible" ,"TipoPago_Id" ,"RegistroVenta_id" ,"UltimoUserMod")
+            VALUES (:usuarioId, :productoId, 1 ,:ftipoPagos,${idVenta},:Usermodify )
         `;
         await db.query(sqlInsertStock, {
-            replacements: { usuarioId: fusuario_id, productoId: fproducto_id },
+            replacements: { usuarioId: fusuario_id, productoId: fproducto_id,ftipoPagos: ftipoPago, Usermodify:fUserMod },
         });
 
         return res.status(200).json({
@@ -5806,6 +5809,160 @@ export const asignarcursoadminv2 = async (req = request, res = response) => {
         return res.status(500).json({
             ok: false,
             msg: "Error al asignar curso.",
+        });
+    }
+};
+
+export const AsignarMembresiasAdmin = async (req = request, res = response) => {
+    const { fusuario_id, fplan_id, fprecioplan, fplan_nombre, fduracion_dias , UltimoUSerMod } = req.body;
+    //ftipopago|| ftipopago,
+    if (!fusuario_id || !fplan_id || !fprecioplan || !fplan_nombre || !fduracion_dias|| !UltimoUSerMod) {
+        return res.status(400).json({
+            ok: false,
+            msg: "Faltan datos obligatorios (usuario, plan, precio, nombre del plan o duración del plan).",
+        });
+    }
+
+    const sqlRegistroVenta = `
+        INSERT INTO "RegistroVenta" ("Usuario_id", "Plan_id", "PrecioVenta", "FechaCompra")
+        VALUES (:usuarioId, :plan_id, :precioVenta, CURRENT_TIMESTAMP)
+        RETURNING "IdRegistroVenta";
+    `;
+
+    const sqlMembresiaExistente = `
+        SELECT "FechaExpiracion", "IdMembresia"
+        FROM "membresias"
+        WHERE "UsuarioId" = :usuarioId and "Status" = 1
+        ORDER BY "FechaExpiracion" DESC
+        LIMIT 1;
+    `;
+
+    const sqlDesactivarMembresia = `
+        UPDATE "membresias"
+        SET "Status" = 0, "UpdatedAt" = CURRENT_TIMESTAMP
+        WHERE "UsuarioId" = :usuarioId and "Status" = 1;
+    `;
+
+    const sqlInsertMembresia = `
+        INSERT INTO "membresias" (
+            "UsuarioId", 
+            "Plan", 
+            "FechaInicio", 
+            "FechaExpiracion", 
+            "Status", 
+            "CreatedAt", 
+            "UpdatedAt",
+            "UltimoUSerMod"
+        ) VALUES (
+            :usuarioId,
+            :planNombre,
+            :fechaInicio,
+            :fechaExpiracion,
+            1,
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP,
+            :UltimoUSerMods
+        )
+        RETURNING "IdMembresia", "Status";
+    `;
+
+    const sqlActualizarPremium = `
+        UPDATE "Usuario"
+        SET "Premium" = 1
+        WHERE "IdUsuario" = :usuarioId;
+    `;
+
+    const calcularFechaExpiracion = (fechaBase: string | number | Date | dayjs.Dayjs | null | undefined, dias: number) => {
+        return dayjs(fechaBase).add(dias, 'day').toDate();
+    };
+
+    try {
+        const transaction = await db.transaction();
+
+        try {
+            // 1. Registrar la venta
+            const [ventaResult] = await db.query(sqlRegistroVenta, {
+                replacements: {
+                    usuarioId: fusuario_id,
+                    plan_id: fplan_id,
+                    precioVenta: fprecioplan,
+                },
+                transaction,
+            }) as any[];
+
+            const idRegistroVenta = ventaResult[0]?.IdRegistroVenta;
+
+            // 2. Consultar membresía actual
+            const [membresiaActual] = await db.query(sqlMembresiaExistente, {
+                replacements: { usuarioId: fusuario_id },
+                transaction,
+            });
+
+            let diasRestantes = 0;
+            let fechaInicioMembresia = dayjs();
+
+            if (membresiaActual.length > 0) {
+                const fechaExpActual = dayjs((membresiaActual[0] as any).FechaExpiracion);
+                const hoy = dayjs();
+
+                if (fechaExpActual.isAfter(hoy)) {
+                    diasRestantes = fechaExpActual.diff(hoy, 'day');
+                    fechaInicioMembresia = hoy;
+                }
+
+                await db.query(sqlDesactivarMembresia, {
+                    replacements: { usuarioId: fusuario_id },
+                    transaction,
+                });
+            }
+
+            // 3. Insertar nueva membresía
+            const totalDias = diasRestantes + parseInt(fduracion_dias);
+            const nuevaFechaExpiracion = calcularFechaExpiracion(fechaInicioMembresia, totalDias);
+
+            const [membresiaResult] = await db.query(sqlInsertMembresia, {
+                replacements: {
+                    usuarioId: fusuario_id,
+                    planNombre: fplan_nombre,
+                    fechaInicio: fechaInicioMembresia.toDate(),
+                    fechaExpiracion: nuevaFechaExpiracion,
+                    UltimoUSerMods: UltimoUSerMod
+                },
+                transaction,
+            }) as any[];
+
+            const { IdMembresia, Status } = membresiaResult[0];
+
+            // 4. Actualizar usuario como Premium
+            await db.query(sqlActualizarPremium, {
+                replacements: { usuarioId: fusuario_id },
+                transaction,
+            });
+
+            await transaction.commit();
+
+            return res.status(200).json({
+                ok: true,
+                msg: "Compra realizada correctamente. El usuario ahora es premium.",
+                membresiaId: IdMembresia,
+                statusMembresia: Status,
+                registroVentaId: idRegistroVenta
+            });
+
+        } catch (err) {
+            await transaction.rollback();
+            console.error("Error interno:", err);
+            return res.status(500).json({
+                ok: false,
+                msg: "Error al realizar la compra.",
+            });
+        }
+
+    } catch (err) {
+        console.error("Error al iniciar la transacción:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "No se pudo procesar la transacción.",
         });
     }
 };
@@ -6363,6 +6520,11 @@ export const listarcertificadoacreditaciones = async (
         const condicionWhereStock = esPremium
             ? ''
             : `pst."Usuario_id"  = ${fusuario_id} AND`;
+
+        // Variable para seleccionar TipoPago_Id
+        const selectTipoPago = esPremium
+            ? `NULL AS "TipoPago_Id"` // Si es premium, devolvemos NULL
+            : `pst."TipoPago_Id" AS "TipoPago_Id"`; // Si no es premium, obtenemos el valor real
     const sql = `
  
   WITH ProfesoresProcesados AS (
@@ -6374,6 +6536,7 @@ export const listarcertificadoacreditaciones = async (
     GROUP BY "pro"."IdProducto"
 )
 SELECT
+    ${selectTipoPago},
     LEAST(
         (
             -- 45% para TipoEvaluacion = '1'
@@ -6567,7 +6730,8 @@ GROUP BY
     pad."Tipo4",
     pad."NombreArchivo",
     sa."IdSala",
-    tmo."TipoModalidad";
+    tmo."TipoModalidad"
+    ${esPremium ? '' : ', pst."TipoPago_Id"'};
 
 
     `;
@@ -9506,3 +9670,122 @@ export const actualizarEstadoPagoQR = async (req = request, res = response) => {
 
 
 
+// nuevos endpoint para administrador
+
+export const ListTipopago = async (req = request, res = response) => {
+    const sql = `
+       Select "IdTipoPago","TipoPago" from "TipoPago" where "Status" = 1
+    `;
+
+    try {
+        const data: any = await db.query(sql, {});
+        return res.status(200).json({
+            ok: true,
+            msg: "Tipos de pago cargados correctamente",
+            data: data[0], // solo los resultados
+        });
+    } catch (err) {
+        console.error("Error al obtener tipos de pago:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "Error al consultar la base de datos",
+        });
+    }
+};
+export const ListPlan = async (req = request, res = response) => {
+    const sql = `
+       select "IdPlan", "Plan" ,"Precio" ,"DuracionDias" from "Plan"
+
+    `;
+
+    try {
+        const data: any = await db.query(sql, {});
+        return res.status(200).json({
+            ok: true,
+            msg: "Lista de planes cargados correctamente",
+            data: data[0], // solo los resultados
+        });
+    } catch (err) {
+        console.error("Error al obtener tipos de pago:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "Error al consultar la base de datos",
+        });
+    }
+};
+export const ListProductoStockUser = async (req = request, res = response) => {
+        const { Usuario } = req.body
+
+    const sql = `
+       	SELECT 
+			ps."IdProductoStock",
+			ps."TipoPago_Id",
+			cur."Curso",
+			tm."TipoModalidad",
+			 (
+		    SELECT 
+		      JSON_AGG(
+		        CONCAT('/', "pa"."Tipo1", '/', "pa"."Tipo2", '/', "pa"."Tipo3", '/', "pa"."Tipo4", '/', "pa"."NombreArchivo")
+		     )
+    FROM "ProductoAdjunto" "pa"
+    WHERE "pa"."Curso_id" = "cur"."IdCurso"
+  ) AS "RutaImagen"
+			
+	FROM "ProductoStock" ps
+	JOIN "Producto" p ON ps."Producto_id" = p."IdProducto"
+	JOIN "Curso" cur ON p."Curso_id" = cur."IdCurso"
+	JOIN "TipoModalidad" tm ON  p."TipoModalidad_id" = tm."IdTipoModalidad"
+	
+ 	WHERE ps."Usuario_id" = :UserId AND cur."Estado_id" = '1'
+	GROUP BY ps."IdProductoStock", ps."TipoPago_Id", cur."Curso",cur."IdCurso",tm."TipoModalidad";
+
+
+    `;
+
+    try {
+        const data: any = await db.query(sql, {
+            replacements: { UserId: Usuario },
+
+        });
+        return res.status(200).json({
+            ok: true,
+            msg: "Lista de planes cargados correctamente",
+            data: data[0], // solo los resultados
+        });
+    } catch (err) {
+        console.error("Error al obtener tipos de pago:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "Error al consultar la base de datos",
+        });
+    }
+};
+export const UpdateProductoStockUser = async (req = request, res = response) => {
+        const { TypeBuy , Usuario ,ProductoStockId} = req.body
+
+    const sql = `
+       
+            UPDATE "ProductoStock"
+            SET "TipoPago_Id" = :Typepagos
+            WHERE "Usuario_id" = :UserId AND "IdProductoStock" = :ProductoStock
+
+    `;
+
+    try {
+        const data: any = await db.query(sql, {
+            replacements: { UserId: Usuario,Typepagos: TypeBuy,ProductoStock:ProductoStockId  },
+
+        });
+        return res.status(200).json({
+            ok: true,
+            msg: "cambios Realizados correctamente",
+            data: data[0], // solo los resultados
+        });
+    } catch (err) {
+        console.error("Error al Updatear ", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "Error al consultar la base de datos",
+        });
+    }
+};
