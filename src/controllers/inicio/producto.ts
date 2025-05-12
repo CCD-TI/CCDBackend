@@ -4731,8 +4731,8 @@ WITH ProductosNumerados AS (
                 ORDER BY "pad"."IdProductoAdjunto"
             )
         FROM "ProductoAdjunto" "pad"
-        WHERE "pad"."Curso_id" = "cur"."IdCurso"
-        ) AS "RutaImagen",
+        WHERE "pad"."Curso_id" = "cur"."IdCurso" 
+        ) AS "RutaImagen", 
         (SELECT COUNT(*)
          FROM "ProductoTemario"
          WHERE "Curso_id" = "cur"."IdCurso"
@@ -4746,6 +4746,7 @@ WITH ProductosNumerados AS (
     INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
     INNER JOIN "ProductoAtributo" "pat" ON "pat"."Curso_id" = "cur"."IdCurso"
     LEFT JOIN "ProductoPrecio" "ppr" ON "ppr"."Producto_id" = "pro"."IdProducto"
+      WHERE "cur"."Estado_id" != '0'
 )
 SELECT 
     JSON_AGG(
@@ -4778,7 +4779,7 @@ SELECT
     (MAX("RutaImagen"::text))::json AS "RutaImagen",
     MAX("CantidadModulos") AS "CantidadModulos"
 FROM ProductosNumerados
-WHERE rn <= 4 AND "IdEscuela" IN (1,2,3)
+WHERE rn <= 4 AND "IdEscuela" IN (1,2,3) 
 GROUP BY 
     "IdEscuela",
     "Escuela",
