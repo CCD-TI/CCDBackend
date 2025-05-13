@@ -194,7 +194,9 @@ import {
     ListPlan,
     AsignarMembresiasAdmin,
     ListProductoStockUser,
-    UpdateProductoStockUser
+    UpdateProductoStockUser,
+    ListUserData,
+    UpdateUserData
 } from '../controllers/inicio/producto';
 
 
@@ -1007,6 +1009,8 @@ router.get('/ListPlan', ListPlan)
 router.post('/AsignarMembresiasAdmin', AsignarMembresiasAdmin)
 router.post('/ListProductoStockUser', ListProductoStockUser)
 router.put('/UpdateProductoStockUser', UpdateProductoStockUser)
+router.post('/ListUserData', ListUserData)
+router.put('/UpdateUserData', UpdateUserData)
 
 
 

@@ -4393,8 +4393,17 @@ export const listarproductospreciov2 = async (req = request, res = response) => 
 
     // Ajusta la consulta SQL a tus necesidades
     const sql = `
-      select vwp.*,"Precio" from "VW_ProductosVista" vwp
-inner join "ProductoPrecio" pp on pp."Producto_id"=vwp."IdProducto"
+       SELECT 
+            vwp.*, 
+            pp."Precio" 
+        FROM 
+            "VW_ProductosVista" vwp
+        INNER JOIN 
+            "ProductoPrecio" pp 
+        ON 
+            pp."Producto_id" = vwp."IdProducto"
+        WHERE 
+            vwp."Estado_id" = '1'
         `;
 
     try {
@@ -9761,6 +9770,7 @@ export const ListProductoStockUser = async (req = request, res = response) => {
         });
     }
 };
+
 export const UpdateProductoStockUser = async (req = request, res = response) => {
         const { TypeBuy , Usuario ,ProductoStockId} = req.body
 
@@ -9787,6 +9797,163 @@ export const UpdateProductoStockUser = async (req = request, res = response) => 
         return res.status(500).json({
             ok: false,
             msg: "Error al consultar la base de datos",
+        });
+    }
+};
+
+
+export const ListUserData = async(req = request ,res =response) =>{
+    const{Usuario} = req.body
+
+    // if(!Usuario){
+
+        
+    // }
+
+   const sql  = `
+   
+           SELECT 
+                "ent"."Nombres",
+                "ent"."Apellidos",
+                "ent"."TipoDocumento_id",
+                "tp"."TipoDocumento",
+                "ent"."NroDocumento",
+                "ent"."Correo",
+                "ent"."Genero",
+                "ent"."FcNacimiento",
+                "ent"."Telefono",
+                "user"."Usuario",
+                "user"."Clave",
+                "user"."RutaImagenPerfil",
+                "mem"."Plan",
+                "mem"."FechaInicio",
+                "mem"."FechaExpiracion"
+            FROM 
+                "Usuario" "user"
+            JOIN 
+                "Entidad" "ent" ON "ent"."IdEntidad" = "user"."Entidad_id"
+            JOIN 
+                membresias "mem" ON "mem"."UsuarioId" = "user"."IdUsuario"
+            JOIN 
+                "TipoDocumento" "tp" ON "tp"."IdTipoDocumento" = "ent"."TipoDocumento_id"
+
+            WHERE "user"."IdUsuario" = 1 
+
+	
+	
+	`
+
+    try {
+
+        const data:any = await db.query(sql,{
+            replacements: {
+                UsuarioId:Usuario
+            }
+        });
+         return res.status(200).json({
+            ok: true,
+            msg: "cambios Realizados correctamente",
+            data: data[0], // solo los resultados
+        });
+        
+     } catch (err) {
+        console.error("Error al traer la data ", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "Error al consultar la base de datos",
+        });
+    }
+
+}
+
+
+export const UpdateUserData = async (req = request, res = response) => {
+    const {
+        IdUsuario,
+        Nombres,
+        Apellidos,
+        TipoDocumento_id,
+        NroDocumento,
+        Correo,
+        Genero,
+        FcNacimiento,
+        Telefono,
+        Usuario,
+        Clave,
+        Plan,
+        FechaInicio,
+        FechaExpiracion
+    } = req.body;
+
+    try {
+        // Actualizar datos de la Entidad
+        await db.query(`
+            UPDATE "Entidad" SET
+                "Nombres" = :Nombres,
+                "Apellidos" = :Apellidos,
+                "TipoDocumento_id" = :TipoDocumento_id,
+                "NroDocumento" = :NroDocumento,
+                "Correo" = :Correo,
+                "Genero" = :Genero,
+                "FcNacimiento" = :FcNacimiento,
+                "Telefono" = :Telefono
+            WHERE "IdEntidad" = (
+                SELECT "Entidad_id" FROM "Usuario" WHERE "IdUsuario" = :IdUsuario
+            )
+        `, {
+            replacements: {
+                Nombres,
+                Apellidos,
+                TipoDocumento_id,
+                NroDocumento,
+                Correo,
+                Genero,
+                FcNacimiento,
+                Telefono,
+                IdUsuario
+            }
+        });
+
+        // Actualizar datos del Usuario
+        await db.query(`
+            UPDATE "Usuario" SET
+                "Usuario" = :Usuario,
+                "Clave" = :Clave
+            WHERE "IdUsuario" = :IdUsuario
+        `, {
+            replacements: {
+                Usuario,
+                Clave,
+                IdUsuario
+            }
+        });
+
+        // Actualizar membresía
+        await db.query(`
+            UPDATE membresias SET
+                "Plan" = :Plan,
+                "FechaInicio" = :FechaInicio,
+                "FechaExpiracion" = :FechaExpiracion
+            WHERE "UsuarioId" = :IdUsuario
+        `, {
+            replacements: {
+                Plan,
+                FechaInicio,
+                FechaExpiracion,
+                IdUsuario
+            }
+        });
+
+        return res.status(200).json({
+            ok: true,
+            msg: "Datos actualizados correctamente"
+        });
+
+    } catch (err) {
+        console.error("Error al actualizar los datos: ", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "Error al actualizar los datos del usuario"
         });
     }
 };
