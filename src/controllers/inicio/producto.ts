@@ -9832,12 +9832,13 @@ export const ListUserData = async(req = request ,res =response) =>{
                 "Usuario" "user"
             JOIN 
                 "Entidad" "ent" ON "ent"."IdEntidad" = "user"."Entidad_id"
-            JOIN 
+            LEFT JOIN 
                 membresias "mem" ON "mem"."UsuarioId" = "user"."IdUsuario"
-            JOIN 
+            LEFT JOIN 
                 "TipoDocumento" "tp" ON "tp"."IdTipoDocumento" = "ent"."TipoDocumento_id"
+            WHERE 
+                "user"."IdUsuario" = :UsuarioId;
 
-            WHERE "user"."IdUsuario" = :UsuarioId 
 
 	
 	
