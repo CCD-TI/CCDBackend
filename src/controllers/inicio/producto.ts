@@ -9880,80 +9880,94 @@ export const UpdateUserData = async (req = request, res = response) => {
         Telefono,
         Usuario,
         Clave,
-        Plan,
-        FechaInicio,
-        FechaExpiracion
+        // Plan,
+        // FechaInicio,
+        // FechaExpiracion
     } = req.body;
 
     try {
+        // Validar que los campos requeridos existan
+        if (!IdUsuario) {
+            return res.status(400).json({
+                ok: false,
+                msg: "El ID de usuario es obligatorio"
+            });
+        }
+
         // Actualizar datos de la Entidad
         await db.query(`
             UPDATE "Entidad" SET
-                "Nombres" = :Nombres,
-                "Apellidos" = :Apellidos,
-                "TipoDocumento_id" = :TipoDocumento_id,
-                "NroDocumento" = :NroDocumento,
-                "Correo" = :Correo,
-                "Genero" = :Genero,
-                "FcNacimiento" = :FcNacimiento,
-                "Telefono" = :Telefono
+                "Nombres" = $1,
+                "Apellidos" = $2,
+                "TipoDocumento_id" = $3,
+                "NroDocumento" = $4,
+                "Correo" = $5,
+                "Genero" = $6,
+                "FcNacimiento" = $7,
+                "Telefono" = $8
             WHERE "IdEntidad" = (
-                SELECT "Entidad_id" FROM "Usuario" WHERE "IdUsuario" = :IdUsuario
+                SELECT "Entidad_id" FROM "Usuario" WHERE "IdUsuario" = $9
             )
         `, {
-            replacements: {
+            bind: [
                 Nombres,
                 Apellidos,
                 TipoDocumento_id,
                 NroDocumento,
                 Correo,
-                Genero,
-                FcNacimiento,
-                Telefono,
+                Genero || null,
+                FcNacimiento || null,
+                Telefono || null,
                 IdUsuario
-            }
+            ],
+            type: "UPDATE"
         });
 
         // Actualizar datos del Usuario
         await db.query(`
             UPDATE "Usuario" SET
-                "Usuario" = :Usuario,
-                "Clave" = :Clave
-            WHERE "IdUsuario" = :IdUsuario
+                "Usuario" = $1,
+                "Clave" = $2
+            WHERE "IdUsuario" = $3
         `, {
-            replacements: {
+            bind: [
                 Usuario,
                 Clave,
                 IdUsuario
-            }
+            ],
+            type: "UPDATE"
         });
 
-        // Actualizar membresía
-        await db.query(`
-            UPDATE membresias SET
-                "Plan" = :Plan,
-                "FechaInicio" = :FechaInicio,
-                "FechaExpiracion" = :FechaExpiracion
-            WHERE "UsuarioId" = :IdUsuario
-        `, {
-            replacements: {
-                Plan,
-                FechaInicio,
-                FechaExpiracion,
-                IdUsuario
-            }
-        });
+        // Actualizar membresía si se proporcionan los datos
+        // if (Plan || FechaInicio || FechaExpiracion) {
+        //     await db.query(`
+        //         UPDATE "membresias" SET
+        //             "Plan" = COALESCE($1, "Plan"),
+        //             "FechaInicio" = COALESCE($2, "FechaInicio"),
+        //             "FechaExpiracion" = COALESCE($3, "FechaExpiracion")
+        //         WHERE "UsuarioId" = $4
+        //     `, {
+        //         bind: [
+        //             Plan || null,
+        //             FechaInicio || null,
+        //             FechaExpiracion || null,
+        //             IdUsuario
+        //         ],
+        //         type: "UPDATE"
+        //     });
+        // }
 
         return res.status(200).json({
             ok: true,
             msg: "Datos actualizados correctamente"
         });
 
-    } catch (err) {
+    } catch (err:any) {
         console.error("Error al actualizar los datos: ", err);
         return res.status(500).json({
             ok: false,
-            msg: "Error al actualizar los datos del usuario"
+            msg: "Error al actualizar los datos del usuario",
+            error: err.message
         });
     }
 };
