@@ -9837,7 +9837,7 @@ export const ListUserData = async(req = request ,res =response) =>{
             JOIN 
                 "TipoDocumento" "tp" ON "tp"."IdTipoDocumento" = "ent"."TipoDocumento_id"
 
-            WHERE "user"."IdUsuario" = 1 
+            WHERE "user"."IdUsuario" = :UsuarioId 
 
 	
 	
