@@ -5824,9 +5824,9 @@ export const asignarcursoadminv2 = async (req = request, res = response) => {
 };
 
 export const AsignarMembresiasAdmin = async (req = request, res = response) => {
-    const { fusuario_id, fplan_id, fprecioplan, fplan_nombre, fduracion_dias , UltimoUSerMod } = req.body;
-    //ftipopago|| ftipopago,
-    if (!fusuario_id || !fplan_id || !fprecioplan || !fplan_nombre || !fduracion_dias|| !UltimoUSerMod) {
+    const { fusuario_id, fplan_id, fprecioplan, fplan_nombre, fduracion_dias , UltimoUSerMod ,ftipopago } = req.body;
+    
+    if (!fusuario_id || !fplan_id || !fprecioplan || !fplan_nombre || !fduracion_dias|| !UltimoUSerMod || !ftipopago ) {
         return res.status(400).json({
             ok: false,
             msg: "Faltan datos obligatorios (usuario, plan, precio, nombre del plan o duración del plan).",
@@ -5834,8 +5834,8 @@ export const AsignarMembresiasAdmin = async (req = request, res = response) => {
     }
 
     const sqlRegistroVenta = `
-        INSERT INTO "RegistroVenta" ("Usuario_id", "Plan_id", "PrecioVenta", "FechaCompra")
-        VALUES (:usuarioId, :plan_id, :precioVenta, CURRENT_TIMESTAMP)
+        INSERT INTO "RegistroVenta" ("Usuario_id", "Plan_id", "PrecioVenta", "FechaCompra","UltimoUserMod")
+        VALUES (:usuarioId, :plan_id, :precioVenta, CURRENT_TIMESTAMP , :UltimoUSer)
         RETURNING "IdRegistroVenta";
     `;
 
@@ -5862,7 +5862,9 @@ export const AsignarMembresiasAdmin = async (req = request, res = response) => {
             "Status", 
             "CreatedAt", 
             "UpdatedAt",
-            "UltimoUSerMod"
+            "TipoPago_Id",
+            "UltimoUSerMod",
+             "RegistroVentaId"
         ) VALUES (
             :usuarioId,
             :planNombre,
@@ -5871,7 +5873,9 @@ export const AsignarMembresiasAdmin = async (req = request, res = response) => {
             1,
             CURRENT_TIMESTAMP,
             CURRENT_TIMESTAMP,
-            :UltimoUSerMods
+            :tipopago,
+            :UltimoUSerMods,
+            :RegistroVenta
         )
         RETURNING "IdMembresia", "Status";
     `;
@@ -5896,6 +5900,8 @@ export const AsignarMembresiasAdmin = async (req = request, res = response) => {
                     usuarioId: fusuario_id,
                     plan_id: fplan_id,
                     precioVenta: fprecioplan,
+                    sqlRegistroVenta:sqlRegistroVenta,
+                    UltimoUSer:UltimoUSerMod
                 },
                 transaction,
             }) as any[];
@@ -5936,7 +5942,9 @@ export const AsignarMembresiasAdmin = async (req = request, res = response) => {
                     planNombre: fplan_nombre,
                     fechaInicio: fechaInicioMembresia.toDate(),
                     fechaExpiracion: nuevaFechaExpiracion,
-                    UltimoUSerMods: UltimoUSerMod
+                    tipopago: ftipopago,
+                    UltimoUSerMods: UltimoUSerMod,
+                    RegistroVenta:idRegistroVenta
                 },
                 transaction,
             }) as any[];
@@ -9969,6 +9977,109 @@ export const UpdateUserData = async (req = request, res = response) => {
             ok: false,
             msg: "Error al actualizar los datos del usuario",
             error: err.message
+        });
+    }
+};
+
+export const ActualizarMembresiaYRegistroVenta = async (req = request, res = response) => {
+    const { fusuario_id, fplan_id, fprecioplan, fplan_nombre, fduracion_dias, UltimoUSerMod, ftipopago } = req.body;
+
+    if (!fusuario_id || !fplan_id || !fprecioplan || !fplan_nombre || !fduracion_dias || !UltimoUSerMod || !ftipopago) {
+        return res.status(400).json({
+            ok: false,
+            msg: "Faltan datos obligatorios (usuario, plan, precio, nombre del plan, duración, etc.).",
+        });
+    }
+
+    try {
+        const transaction = await db.transaction();
+
+        // 1. Buscar membresía activa más reciente del usuario
+        const [membresiaResult] = await db.query(`
+            SELECT "IdMembresia", "RegistroVentaId"
+            FROM "membresias"
+            WHERE "UsuarioId" = :usuarioId AND "Status" = 1
+            ORDER BY "CreatedAt" DESC
+            LIMIT 1;
+        `, {
+            replacements: { usuarioId: fusuario_id },
+            transaction,
+        }) as any[];
+
+        if (membresiaResult.length === 0) {
+            await transaction.rollback();
+            return res.status(404).json({
+                ok: false,
+                msg: "No se encontró membresía activa para este usuario.",
+            });
+        }
+
+        const { IdMembresia, RegistroVentaId } = membresiaResult[0];
+
+        if (!RegistroVentaId) {
+            await transaction.rollback();
+            return res.status(400).json({
+                ok: false,
+                msg: "La membresía activa no tiene un registro de venta asociado.",
+            });
+        }
+
+        // 2. Actualizar la membresía
+        const nuevaFechaExpiracion = dayjs().add(parseInt(fduracion_dias), 'day').toDate();
+
+        await db.query(`
+            UPDATE "membresias"
+            SET 
+                "Plan" = :planNombre,
+                "FechaExpiracion" = :fechaExpiracion,
+                "UpdatedAt" = CURRENT_TIMESTAMP,
+                "TipoPago_Id" = :tipoPago,
+                "UltimoUserMod" = :UltimoUser
+            WHERE "IdMembresia" = :idMembresia;
+        `, {
+            replacements: {
+                planNombre: fplan_nombre,
+                fechaExpiracion: nuevaFechaExpiracion,
+                UltimoUser:UltimoUSerMod,
+                tipoPago: ftipopago,
+                idMembresia: IdMembresia
+            },
+            transaction
+        });
+
+        // 3. Actualizar el registro de venta relacionado
+        await db.query(`
+            UPDATE "RegistroVenta"
+            SET 
+                "Plan_id" = :nuevoPlanId,
+                "PrecioVenta" = :nuevoPrecio,
+                "FechaCompra" = CURRENT_TIMESTAMP,
+                "UltimoUserMod" = :UltimoUser
+            WHERE "IdRegistroVenta" = :registroVentaId;
+        `, {
+            replacements: {
+                nuevoPlanId: fplan_id,
+                nuevoPrecio: fprecioplan,
+                registroVentaId: RegistroVentaId,
+                UltimoUser:UltimoUSerMod
+            },
+            transaction
+        });
+
+        await transaction.commit();
+
+        return res.status(200).json({
+            ok: true,
+            msg: "Membresía y registro de venta actualizados correctamente.",
+            membresiaId: IdMembresia,
+            registroVentaId: RegistroVentaId
+        });
+
+    } catch (err) {
+        console.error("Error al actualizar membresía:", err);
+        return res.status(500).json({
+            ok: false,
+            msg: "Error interno al actualizar la membresía.",
         });
     }
 };
