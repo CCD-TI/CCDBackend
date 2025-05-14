@@ -42,6 +42,7 @@ export const connect = async () => {
     await sequelize.authenticate();
     console.log("Base de datos CCD online");
   } catch (error) {
+    console.error("Error al conectar a la base de datos:", error);  // Aumenta los detalles del error para depuración
     console.log("Base de datos CCD offline");
     throw error;
   }
