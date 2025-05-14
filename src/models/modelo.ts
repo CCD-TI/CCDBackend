@@ -1,7 +1,10 @@
 import { DataTypes } from "sequelize";
-import { db } from "../db/connection";
+import { getSiscardRevolution  } from "../db/connection";
 
-const Modelo = db[0].define(
+const SiscardRevolution = getSiscardRevolution();
+
+
+const Modelo = SiscardRevolution.define(
   "Modelo",
   {
     IdModelo: {

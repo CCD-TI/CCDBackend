@@ -1,7 +1,9 @@
 import { DataTypes } from "sequelize";
-import { db } from "../db/connection";
+import { getSiscardRevolution } from "../db/connection"; // Obtener la instancia de Sequelize
 
-const Entidad = db[0].define(
+// Obtener la instancia de Sequelize
+const SiscardRevolution = getSiscardRevolution();
+const Entidad = SiscardRevolution.define(
   "Entidad",
   {
     IdEntidad: {
