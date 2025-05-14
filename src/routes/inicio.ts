@@ -5,7 +5,7 @@ const fs = require('fs');
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 import { listarSubCategoriaxCategoria } from '../controllers/inicio/inicio';
-import db from "../../src/db/connection";
+import db, { getSiscardRevolution } from "../../src/db/connection";
 import {
     EnviarCorreoPagoConArchivo,
     acreditacionescertificadosv2,
@@ -410,7 +410,7 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
         fDescripcion, fDireccion, UCuerpo, UPerfil } = req.body;
     const sql = `select count(*) from "Usuario" where "Usuario"='${fUsuario}'`;
 
-    try {
+    try {   const db = getSiscardRevolution();
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
         if (data[0][0].count == 1) {
@@ -470,7 +470,7 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
     }
 });
 router.post('/subirvideossala', upload.single('Dvideovivo'), async (req: Request, res: Response) => {
-    try {
+    try {   const db = getSiscardRevolution();
         const { pidproductotemario, pidsala } = req.body;
         const file = req.file;
 
@@ -522,7 +522,7 @@ router.post('/subirvideossala', upload.single('Dvideovivo'), async (req: Request
 });
 
 router.post('/subircertificado', upload.single('Dvideovivo'), async (req: Request, res: Response) => {
-    try {
+    try {   const db = getSiscardRevolution();
         const { pproducto_id, pusuario_id ,posicion} = req.body;
         const file = req.file;
 
@@ -572,7 +572,7 @@ router.post('/subircertificado', upload.single('Dvideovivo'), async (req: Reques
 });
 
 router.post('/guardar-atributos-admin', upload.none(), async (req: Request, res: Response) => {
-    try {
+    try {   const db = getSiscardRevolution();
         const { ptitulo, pdescripcion, pcalificacion, pseguidores, pnivel, pmarcasrespaldo,
             pexamenparcial, pexamenfinal, pprofesores, pfrecuencia, phorasacademicas, pcurso_id, pcodigocurso, pwhatsapp, PBrochure, PPortada
         } = req.body;
@@ -681,7 +681,7 @@ router.post('/guardar-atributos-admin', upload.none(), async (req: Request, res:
     }
 });
 router.post('/guardar-archivosmodulos-admin', upload.none(), async (req: Request, res: Response) => {
-    try {
+    try {   const db = getSiscardRevolution();
         const { fileMetadata, idproductotemario, idcurso } = req.body;
         const archivos = JSON.parse(fileMetadata); // Convertir a array de objetos
 
@@ -745,7 +745,7 @@ router.post('/guardar-archivosmodulos-admin', upload.none(), async (req: Request
 
 
 router.post('/ActualizarCursoOnline', async (req: Request, res: Response) => {
-    try {
+    try {   const db = getSiscardRevolution();
         // Obtener los datos del cuerpo de la solicitud
         const { pidproducto, pprecio } = req.body;
 
@@ -769,7 +769,7 @@ router.post('/ActualizarCursoOnline', async (req: Request, res: Response) => {
     }
 });
 router.post('/ActualizarCursoMixto', async (req: Request, res: Response) => {
-    try {
+    try {   const db = getSiscardRevolution();
         // Obtener los datos del cuerpo de la solicitud
         const { pidproducto, pprecio } = req.body;
 
@@ -793,7 +793,7 @@ router.post('/ActualizarCursoMixto', async (req: Request, res: Response) => {
     }
 });
 router.post('/ActualizarCursoAsincronico', async (req: Request, res: Response) => {
-    try {
+    try {   const db = getSiscardRevolution();
         // Obtener los datos del cuerpo de la solicitud
         const { pidproducto, pprecio } = req.body;
 
@@ -817,7 +817,7 @@ router.post('/ActualizarCursoAsincronico', async (req: Request, res: Response) =
     }
 });
 router.post('/ObtenerIdsProducto', async (req: Request, res: Response) => {
-    try {
+    try {   const db = getSiscardRevolution();
         // Obtener los datos del cuerpo de la solicitud
         const { pclasificacion } = req.body;
         const { pmodelo } = req.body;
@@ -864,7 +864,7 @@ router.post('/generate-presigned-urls', upload.fields([
     const { files } = req.body; // Espera un array con nombres y tipos de archivos
 
     const urls: any = {};
-    try {
+    try {   const db = getSiscardRevolution();
         for (const file of files) {
             console.log('1' + JSON.stringify(file));
             const params = {

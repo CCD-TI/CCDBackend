@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import { request, response } from 'express';
-import db from "../../db/connection";
+import { getSiscardRevolution } from "../../db/connection";
 
 
 
@@ -15,6 +15,7 @@ export const ObtenerFechaMembresia = async (req = request, res = response) => {
     `;
 
     try {
+         const db = getSiscardRevolution();
         // Ejecutar la consulta de la base de datos
         const result: any[]  = await db.query(QuerySql, {
             replacements:{ UsuarioId},

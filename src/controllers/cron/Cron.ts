@@ -2,7 +2,7 @@
 
 import { config } from 'dotenv';
 import { request, response } from 'express';
-import db from "../../db/connection";
+import { getSiscardRevolution } from "../../db/connection";
 
 // Cargar las variables de entorno si las tienes en un archivo .env
 config();
@@ -11,6 +11,7 @@ export default async function handler(_req = request, res = response) {
 
 
   try {
+     const db = getSiscardRevolution();
     // Conectar a la base de datos
 
     // Actualizar las membresías expiradas

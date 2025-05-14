@@ -1,5 +1,5 @@
 import { request, response } from "express";
-import db from "../../db/connection";
+import db, { getSiscardRevolution } from "../../db/connection";
 
 export const listarcursosplataformaxusuario = async (req = request, res = response) => {
     const { fusuario_id } = req.body;
@@ -32,7 +32,7 @@ export const listarcursosplataformaxusuario = async (req = request, res = respon
         where "prada"."Usuario_id"=${fusuario_id}
     `;
 
-    try {
+    try {   const db = getSiscardRevolution();
         const data: any = await db.query(sql, {
         });
 
@@ -63,7 +63,7 @@ export const listarcertificadosxusuario = async (req = request, res = response) 
         GROUP BY "cs"."CodigoCertificado","vwp"."Modelo","cs"."FechaGenerado"
     `;
 
-    try {
+    try {   const db = getSiscardRevolution();
         const data: any = await db.query(sql, {
         });
 
@@ -91,7 +91,7 @@ export const listarevaluacionesxusuario = async (req = request, res = response) 
     left join "EvaluacionNota" "en" on "en"."Evaluacion_id"="ev"."IdEvaluacion"
     where "Usuario_id"=${fusuario_id} and "Producto_id"=${fproducto_id}
     `;
-    try {
+    try {   const db = getSiscardRevolution();
         const data: any = await db.query(sql, {
         });
         return res.status(200).json({
@@ -127,7 +127,7 @@ export const listarpreguntasxusuario = async (req = request, res = response) => 
         ORDER BY 
             "pre"."IdPregunta";
     `;
-    try {
+    try {   const db = getSiscardRevolution();
         const data: any = await db.query(sql, {
         });
         return res.status(200).json({
@@ -147,7 +147,7 @@ export const listarpreguntasxusuario = async (req = request, res = response) => 
 export const GuardarDatosExamen = async (req = request, res = response) => {
     const { respuestas } = req.body; // Obtenemos el array de respuestas del cuerpo de la solicitud
 
-    try {
+    try {   const db = getSiscardRevolution();
         await db.query('BEGIN'); // Inicia una transacción
 
         for (const respuesta of respuestas) {
@@ -174,6 +174,7 @@ export const GuardarDatosExamen = async (req = request, res = response) => {
             msg: "Respuestas guardadas correctamente"
         });
     } catch (err) {
+         const db = getSiscardRevolution();
         await db.query('ROLLBACK'); // Deshace la transacción en caso de error
         console.error(err);
         return res.status(400).json({

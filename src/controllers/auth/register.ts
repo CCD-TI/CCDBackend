@@ -1,5 +1,5 @@
 import { request, response } from "express";
-import db from "../../db/connection";
+import db, { getSiscardRevolution } from "../../db/connection";
 import nodemailer from "nodemailer";
 
 // Función simplificada para generar una contraseña de 8 dígitos
@@ -28,6 +28,7 @@ export const crearUsuariov2 = async (req = request, res = response) => {
     const contrasena = generarContrasena();
 
     try {
+         const db = getSiscardRevolution();
         // Insertar en la tabla "Entidad"
         const sqlEntidad = `  
             INSERT INTO "Entidad"("Nombres", "Apellidos", "Correo") 

@@ -1,5 +1,5 @@
 import { request, response } from "express";
-import db from "../../db/connection";
+import { getSiscardRevolution } from "../../db/connection";
 const nodemailer = require("nodemailer");
 import {
   inNumberArray,
@@ -76,7 +76,7 @@ export const getcursodetalle = async (req = request, res = response) => {
 `;
 
   
-  try {
+  try {  const db = getSiscardRevolution();
     // Si el usuario no está definido, pasamos NULL en los reemplazos
     const usuarioValue = Usuario || null;
     
@@ -177,7 +177,7 @@ GROUP BY
   "tpo"."TipoCurso";
   `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: {},
     });
@@ -301,7 +301,7 @@ export const getcursosavCarrusel = async (req = request, res = response) => {
   `;
   
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: {Usuario},
     });
@@ -430,7 +430,7 @@ export const getcursosav = async (req = request, res = response) => {
   `;
   
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: {Usuario},
     });
@@ -555,7 +555,7 @@ export const getcursoProfesional = async (req = request, res = response) => {
   `;
   
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: {Usuario},
     });
@@ -636,7 +636,7 @@ export const frontgetcursodetalle = async (req = request, res = response) => {
       LIMIT 4;
     `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: { Escuela, T1, T2, T4 },
     });
@@ -716,7 +716,7 @@ export const escuelagetcursodetalle = async (req = request, res = response) => {
         "pad"."NombreArchivo";
     `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: { Escuela, T1, T2, T4 },
     });
@@ -749,7 +749,7 @@ export const getescuela = async (req = request, res = response) => {
       WHERE "Estado_id" = '1'
     `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {});
 
     if (!result || result.length === 0) {
@@ -832,7 +832,7 @@ export const frontgetcursodetalleescuela = async (
       Limit 4
     `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: { Escuela, T1, T2, T4 },
     });
@@ -945,7 +945,7 @@ GROUP BY
   "tpo"."TipoCurso";
   `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     // Si el usuario no está definido, pasamos NULL en los reemplazos
     const usuarioValue = Usuario || null;
     
@@ -1074,7 +1074,7 @@ GROUP BY
   "tpo"."TipoCurso"
   `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: { SearchTerm, Escuela , Usuario },
     });
@@ -1170,7 +1170,7 @@ export const buscarCursosPorPalabra = async (req = request, res = response) => {
       "pad"."Tipo4",
       "pad"."NombreArchivo";
     `;
-  try {
+  try {  const db = getSiscardRevolution();
     const data = await db.query(sql, {
       replacements: { Palabra: palabraBusqueda, Escuela, T1, T2, T4 },
     });
@@ -1265,7 +1265,7 @@ export const vercursosespecializacionescuela = async (req = request, res = respo
       "cur"."IdCurso"
   `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     // Si el usuario no está definido, pasamos NULL en los reemplazos
     const usuarioValue = Usuario || null;
     
@@ -1307,7 +1307,7 @@ export const listaespecializacion = async (req = request, res = response) => {
       ORDER BY "esp"."Especializacion" ASC;
   `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     // Ejecutar la consulta SQL directamente usando sequelize.query
     const data = await db.query(sql, {
       replacements: { Escuela },
@@ -1437,7 +1437,7 @@ WHERE "rut"."Estado_id" = '1'
 ORDER BY "rut"."IdRuta";
   `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: {},
     });
@@ -1573,7 +1573,7 @@ LEFT JOIN "Escuela" "esc" ON "esc"."IdEscuela" = (
 WHERE "rut"."Estado_id" = '1' AND "rut"."IdRuta" = :Rid
 ORDER BY "rut"."IdRuta";
   `;
-  try {
+  try {  const db = getSiscardRevolution();
     const [result] = await db.query(sql, {
       replacements: { Rid },
     });
@@ -1605,7 +1605,7 @@ export const asignarrutaadmin = async (req = request, res = response) => {
   INSERT INTO "ProductoStock" ("Usuario_id", "Producto_id", "StockDisponible") VALUES
   (${fusuario_id},${fproducto_id},1);
 `;
-  try {
+  try {  const db = getSiscardRevolution();
     const data = await db.query(sql, {});
     const data1 = await db.query(sql1, {});
     return res.status(200).json({
@@ -1632,7 +1632,7 @@ export const asignarrutaadmin = async (req = request, res = response) => {
 //    select "Curso" from "Curso"
 //   `;
 
-//   try {
+//   try {  const db = getSiscardRevolution();
 //     const data = await db.query(sql); // Ejecutamos la consulta directamente
 
 //     // Devolvemos los resultados directamente, sin necesidad de acceder a data.rows
@@ -1653,7 +1653,7 @@ export const asignarrutaadmin = async (req = request, res = response) => {
 export const asignarxpago = async (req = request, res = response) => {
   const { fproducto_id, fruta_id, fusuario_id, fprecio } = req.body;
 
-  try {
+  try {  const db = getSiscardRevolution();
     if (fproducto_id) {
       // Si se está comprando un producto (curso)
       for(const element of fproducto_id){
@@ -1706,7 +1706,7 @@ export const asignarxpago = async (req = request, res = response) => {
 export const listarcursosconpremium = async (req = request, res = response) => {
   const { fusuario_id } = req.body;
 
-  try {
+  try {  const db = getSiscardRevolution();
       // Verificar si el usuario tiene un plan premium activo
       const sqlVerificarPremium = `
           SELECT "Premium", "FechaExpiracionPremium"
@@ -1802,7 +1802,7 @@ export const listarPaises = async (req = request, res = response) => {
   const sql = `
      SELECT * FROM "Pais" "p"
   `;  
-  try {
+  try {  const db = getSiscardRevolution();
       // Ejecutar la consulta SQL directamente usando sequelize.query
       const data = await db.query(sql, {
         replacements: {},
@@ -1863,7 +1863,7 @@ export const actualizarEntidad = async (req = request, res = response) => {
     WHERE "IdEntidad" = :IdUsuario;
   `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     // Ejecutar la consulta SQL con replacements
     const [results, metadata] = await db.query(sql, {
       replacements: {
@@ -1955,7 +1955,7 @@ export const vercursosespecializacionGeneral = async (
         "pad"."NombreArchivo";
     `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     const data = await db.query(sql, {
       replacements: { TipoModalidad, T1, T2, T4 }, // Reemplazamos las variables con valores dinámicos.
     });
@@ -1982,7 +1982,7 @@ export const listaespecializacionGeneral = async (req = request, res = response)
       ORDER BY "esp"."Especializacion" ASC;
   `;
 
-  try {
+  try {  const db = getSiscardRevolution();
     // Ejecutar la consulta SQL directamente usando sequelize.query
     const data = await db.query(sql, {
       replacements: {  },
