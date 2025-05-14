@@ -6,11 +6,10 @@ import path from 'path';
 import AWS from 'aws-sdk';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-// import db from "../../db/connection";
+import db from "../../db/connection";
 import ExcelJS from "exceljs";
 import { QueryTypes } from "sequelize";
 import dayjs from "dayjs";
-import { getSiscardRevolution } from "../../db/connection";  // Importa la función para obtener la instancia de Sequelize
 
 const nodemailer = require("nodemailer");
 import {
@@ -47,7 +46,7 @@ export const SubirDocumentoUsuario = async (req = request, res = response) => {
         });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Generar nombre del archivo
         const extension = file.originalname.split('.').pop();
         const filename = `EGP/IMAGEN/Home/usuariosQR/${uuidv4()}.${extension}`;
@@ -119,7 +118,7 @@ export const loginUsuario = async (req = request, res = response) => {
       WHERE "Usuario" = :pUsuario
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Buscar usuario en la base de datos
         const [data]: any = await db.query(sql, {
             replacements: { pUsuario },
@@ -191,7 +190,7 @@ export const listarProductoBusqueda = async (req = request, res = response) => {
        
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: { pmodelo: `%${pmodelo || ""}%` }, // Parámetro para evitar inyecciones SQL
@@ -241,7 +240,7 @@ export const listarProductoBusquedaCatalogo = async (
         group by "Clasificacion","Categoria","SubCategoria","Modelo","RutaImagen","pro"."IdProducto"    
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: { pmodelo: `%${pmodelo || ""}%` }, // Parámetro para evitar inyecciones SQL
@@ -357,7 +356,7 @@ GROUP BY
     Limit 12 ${Pagina};
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: { pmodelo: `%${pmodelo || ""}%` }, // Parámetro para evitar inyecciones SQL
@@ -438,7 +437,7 @@ export const listarFiltroClasificacion = async (
             ORDER BY "Clasificacion";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: { pmodelo: `%${pmodelo || ""}%` }, // Parámetro para evitar inyecciones SQL
@@ -523,7 +522,7 @@ export const listarFiltroCategoria = async (req = request, res = response) => {
             ORDER BY "Categoria";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: { pmodelo: `%${pmodelo || ""}%` }, // Parámetro para evitar inyecciones SQL
@@ -622,7 +621,7 @@ export const listarFiltroSubCategoria = async (
         ORDER BY "SubCategoria";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: { pmodelo: `%${pmodelo || ""}%` }, // Parámetro para evitar inyecciones SQL
@@ -659,7 +658,7 @@ export const listarAdministrarCursos = async (
             order by "IdModelo"     
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -689,7 +688,7 @@ export const listarTableTipoProducto = async (
 		inner join "Naturaleza" "na" on "na"."IdNaturaleza"="tp"."Naturaleza_id"    
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -721,7 +720,7 @@ export const listarTableClasificacion = async (
 		  
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -747,7 +746,7 @@ export const listarSelectNaturaleza = async (req = request, res = response) => {
             select * from "Naturaleza"
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -783,7 +782,7 @@ export const listarSelectTipoProducto = async (
 		
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -823,7 +822,7 @@ export const listarSelectClasificacion = async (
 		
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -866,7 +865,7 @@ export const listarSelectCategoria = async (req = request, res = response) => {
 		
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -918,7 +917,7 @@ export const listarSelectSubCategoria = async (
 		
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -944,7 +943,7 @@ export const listarSelectCliente = async (req = request, res = response) => {
 	    		select * from "Cliente"	
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -986,7 +985,7 @@ export const listarEditarCursoGeneral = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyeccione   s SQL
@@ -1022,7 +1021,7 @@ export const listarCursoAdjuntos = async (req = request, res = response) => {
         order by "IdCurso"    
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -1055,7 +1054,7 @@ export const listarSelectTipoDocumento = async (req = request, res = response) =
         WHERE "Agrupacion" = :ptipodocumento
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
             replacements: { ptipodocumento },
 
@@ -1097,7 +1096,7 @@ export const EnviarCorreoPago = async (req = request, res = response) => {
         return res.status(400).json({ error: "El mensaje no puede estar vacío" });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Configuración de nodemailer
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
@@ -1165,7 +1164,7 @@ export const EnviarCorreoPagoConArchivo = async (req = request, res = response) 
 
         const fileData = await fs.promises.readFile(file.filepath);
 
-        try {   const db = getSiscardRevolution();
+        try {
             const transporter = nodemailer.createTransport({
                 host: "smtp.gmail.com",
                 port: 465,
@@ -1211,7 +1210,7 @@ export const EnviarCorreoCorp = async (req = request, res = response) => {
         return res.status(400).json({ error: "Todos los Campos son obligatorios" });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
             port: 465,
@@ -1259,7 +1258,7 @@ export const EnviarCorreoPromo = async (req = request, res = response) => {
         return res.status(400).json({ error: "Todos los Campos son obligatorios" });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
             port: 465,
@@ -1312,7 +1311,7 @@ export const crearUsuario = async (req = request, res = response) => {
             INSERT INTO "Entidad"("Nombres","Apellidos","Correo") values ('${pnombres}','${papellidos}','${pcorreo}') RETURNING "IdEntidad" 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -1427,7 +1426,7 @@ GROUP BY
         
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1484,7 +1483,7 @@ export const listarProductoBusquedaDetallesTotal = async (
         
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: { pmodelo: `%${pmodelo || ""}%` }, // Parámetro para evitar inyecciones SQL
@@ -1545,7 +1544,7 @@ export const listarProductoClasificacionTop = async (
         
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1572,7 +1571,7 @@ export const buscarCupon = async (req = request, res = response) => {
         SELECT * FROM "Cupon" where "CodigoCupon"='${fcupon}'
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1612,7 +1611,7 @@ export const lstprodxclaxcat = async (req = request, res = response) => {
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1654,7 +1653,7 @@ export const listarProductoBeneficio = async (
         
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1683,7 +1682,7 @@ export const listarDocentes = async (req = request, res = response) => {
 		where "Area"='Docentes'
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1744,7 +1743,7 @@ SELECT
         pt."Numeracion"
  `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1769,7 +1768,7 @@ export const listarTemarioVivov2 = async (req = request, res = response) => {
    select "IdSala" from "Sala" where "Producto_id"=${fproductoid} and "Sala"='${fsala_id}'
    `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql1, {});
         const sql = `
@@ -1842,7 +1841,7 @@ export const listarProductoId = async (req = request, res = response) => {
         order by "pro"."IdProducto"
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1867,7 +1866,7 @@ export const listarPais = async (req = request, res = response) => {
        select * from "Pais"
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1892,7 +1891,7 @@ export const listarDepartamento = async (req = request, res = response) => {
        select * from "Departamento" where "Pais_id"=${fpais} order by "Departamento" asc
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1916,7 +1915,7 @@ export const listarProvincia = async (req = request, res = response) => {
        select * from "Provincia" where "Departamento_id"=${fdepartamento}  order by "Provincia" asc
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1940,7 +1939,7 @@ export const listarDistrito = async (req = request, res = response) => {
        select * from "Distrito" where "Provincia_id"=${fprovincia}  order by "Distrito" asc
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -1999,7 +1998,7 @@ export const listarMisDatos = async (req = request, res = response) => {
         WHERE "us"."Usuario" = :fusuario
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
             replacements: { fusuario },
         });
@@ -2028,7 +2027,7 @@ export const listarCatalogoP1 = async (req = request, res = response) => {
        where "pa"."Producto_id"=${fproductoid}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -2068,7 +2067,7 @@ export const listarCursoAdjuntosCatalogo = async (
         order by "IdModelo"      
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -2102,7 +2101,7 @@ export const listarmoduloprofesores = async (req = request, res = response) => {
         from "ProductoAtributo" "pa"where "pa"."Producto_id"=${fproductoid})    
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -2137,7 +2136,7 @@ export const listarprofesoreslanding = async (
     LIMIT 9;
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
             replacements: {}, // Parámetro para evitar inyecciones SQL
@@ -2177,7 +2176,7 @@ export const listarproductoscatalogo = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -2219,7 +2218,7 @@ export const obtenerModalidadesDisponibles = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -2254,7 +2253,7 @@ export const obtenerFechasCurso = async (req = request, res = response) => {
                 WHERE "pro"."Estado_id" = '1' and "mod"."Modelo" like '${fmodelo}' and "cla"."Clasificacion" like '${fclasificacion}'
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -2283,7 +2282,7 @@ export const crearClasificacion = async (req = request, res = response) => {
     const sql1 = `
         INSERT INTO "Clasificacion" ("Clasificacion","TipoProducto_id") VALUES ('${fclasificacion}',${ftipoproducto_id})
     `;
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
 
@@ -2317,7 +2316,7 @@ export const crearCategoria = async (req = request, res = response) => {
     const sql1 = `
         INSERT INTO "Categoria" ("Categoria","Clasificacion_id") VALUES ('${fcategoria}',${fclasificacion_id})
     `;
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
 
@@ -2351,7 +2350,7 @@ export const crearSubCategoria = async (req = request, res = response) => {
     const sql1 = `
         INSERT INTO "SubCategoria" ("SubCategoria","Categoria_id") VALUES ('${fsubcategoria}',${fcategoria_id})
     `;
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
 
@@ -2385,7 +2384,7 @@ export const crearModelo = async (req = request, res = response) => {
     const sql1 = `
         INSERT INTO "Modelo" ("Modelo","Marca_id") VALUES ('${fmodelo}',${fmarca_id})
     `;
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
 
@@ -2413,7 +2412,7 @@ export const listarSelectModelo = async (req = request, res = response) => {
     const sql = `
         select * from "Modelo" 
     `;
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
         return res.status(200).json({
@@ -2443,7 +2442,7 @@ export const crearProductoFinal = async (req = request, res = response) => {
         INSERT INTO "Producto" ("Cliente_id","Modelo_id","SubCategoria_id","Area_id") VALUES (1,${fmodelo_id},${fsubcategoria_id},1) RETURNING "IdProducto" 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
         const sql2 = `
@@ -2531,7 +2530,7 @@ export const datatableusuario = async (req = request, res = response) => {
   order by "IdUsuario"			
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
 
@@ -2552,7 +2551,7 @@ export const datatableusuario = async (req = request, res = response) => {
 export const listarArea = async (req = request, res = response) => {
     // Ajusta la consulta SQL a tus necesidades
     const sql = `select * from "Area"`;
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
         return res.status(200).json({
@@ -2573,7 +2572,7 @@ export const listarPuesto = async (req = request, res = response) => {
     const { fArea_id } = req.body;
     // Ajusta la consulta SQL a tus necesidades
     const sql = `select * from "Puesto" where "Area_id"=${fArea_id}`;
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
         return res.status(200).json({
@@ -2600,7 +2599,7 @@ export const alternarestadomodalidad = async (
     const sql1 = `update "Producto" set "Estado_id"=1 where "IdProducto"=${pidproducto}`;
     const sql2 = `update "Producto" set "Estado_id"=0 where "IdProducto"=${pidproducto}`;
 
-    try {   const db = getSiscardRevolution();
+    try {
         if (pmodo == "1") {
             const data: any = await db.query(sql1, {});
             return res.status(200).json({
@@ -2633,7 +2632,7 @@ export const obtenerFechasCursoxId = async (req = request, res = response) => {
     		    select * from "ProductoFecha" where "Producto_id"=${fproductoid}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -2698,7 +2697,7 @@ GROUP BY
     "IdModelo";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -2727,7 +2726,7 @@ export const concretarventa = async (req = request, res = response) => {
     INSERT INTO "RegistroVenta"("Producto_id","Usuario_id","Cantidad","Precio")
      values (${fproductoid},${fusuarioid},1,${fprecio})
     `;
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         const data1 = await db.query(sql1, {});
@@ -2763,7 +2762,7 @@ export const rellenarcarritodatos = async (req = request, res = response) => {
                 AND "Precio"=${fprecio}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
 
@@ -2794,7 +2793,7 @@ export const fanadircursosusuario = async (req = request, res = response) => {
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
         const sql1 = `
@@ -2850,7 +2849,7 @@ export const listaradministrarcursosv2 = async (
         inner join "TipoCurso" "tpo" on "tpo"."IdTipoCurso"="cur"."TipoCurso_id"
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -2872,7 +2871,7 @@ export const listarclientev2 = async (req = request, res = response) => {
         SELECT * FROM "Cliente"
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -2896,7 +2895,7 @@ export const listarescuelav2 = async (req = request, res = response) => {
         SELECT * FROM "Escuela"
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -2924,7 +2923,7 @@ export const listarespecializacionxescuelav2 = async (
         where "esp"."Escuela_id"=1
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -2951,7 +2950,7 @@ export const listarcursoxespecializacionv2 = async (
         SELECT * FROM "Curso" where "Especializacion_id"=${fespecializacion_id} and "TipoCurso_id"=${ftipocurso_id} and "Cliente_id"=${fcliente_id}
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -2974,7 +2973,7 @@ export const listartipocursov2 = async (req = request, res = response) => {
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3002,7 +3001,7 @@ export const crearescuelav2 = async (req = request, res = response) => {
         ('${fescuela}')
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
 
@@ -3040,7 +3039,7 @@ export const crearespecializacionv2 = async (req = request, res = response) => {
   
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
 
@@ -3078,7 +3077,7 @@ export const crearcursov2 = async (req = request, res = response) => {
   
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
         if (data[0][0].count < 0) {
@@ -3122,7 +3121,7 @@ export const crearproductov2 = async (req = request, res = response) => {
         (${fcurso_id},3) RETURNING "IdProducto";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
         if (data[0][0].count < 0) {
@@ -3170,7 +3169,7 @@ export const listarevaluacionesxcursov2 = async (
         where "Curso_id"=(select "Curso_id" from "Producto" where "IdProducto"=${fproducto_id})
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3201,7 +3200,7 @@ export const listarevaluacionesvivoxcursov2 = async (
 		) AND "Sala_id" = (select "IdSala" from "Sala" where "Producto_id"=${fproducto_id} and "Sala"='${fsala_id}');
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3231,7 +3230,7 @@ export const listarevaluacionesnotaxusuariov2 = async (
         where "Usuario_id"=${fusuario_id}	and "IdEvaluacion"=${fevaluacion_id} and eno."Sala_id" is null
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3263,7 +3262,7 @@ export const listarevaluacionesnotavivoxusuariov2 = async (
         where "Usuario_id"=${fusuario_id}	and "IdEvaluacion"=${fevaluacion_id} and eno."Sala_id"=${fsala_id}
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3326,7 +3325,7 @@ GROUP BY eva."IdEvaluacion", eva."Evaluacion", eva."Descripcion", eva."Duracion"
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3395,7 +3394,7 @@ export const listarpreguntasmarcadasxevaluacionv2 = async (
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3421,7 +3420,7 @@ export const guardarevaluacionv2 = async (req = request, res = response) => {
         WHERE "Evaluacion_id" = ${fevaluacion_id} AND "Usuario_id" = ${fusuario_id} and "Sala_id" is null;
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta para contar intentos
         const data: any = await db.query(sqlIntento);
         const intento = Number(data[0][0].count) + 1;
@@ -3473,7 +3472,7 @@ export const guardarevaluacionvivov2 = async (req = request, res = response) => 
         and "Sala_id"=(select "IdSala" from "Sala" where "Producto_id"=${fproducto_id} and "Sala"='${fsala_id}');
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta para contar intentos
         const data: any = await db.query(sqlIntento);
         const intento = Number(data[0][0].count) + 1;
@@ -3531,7 +3530,7 @@ export const listarescuelasxusuariov2 = async (
     group by esc."IdEscuela",esc."Escuela"
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3564,7 +3563,7 @@ export const listarespecializacionesxusuariov2 = async (
     group by esp."IdEspecializacion",esp."Especializacion",esc."Escuela"
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3591,7 +3590,7 @@ export const listarrutasxusuariov2 = async (req = request, res = response) => {
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3624,7 +3623,7 @@ export const listarespecializacionesxescuelav2 = async (
         group by "IdEspecializacion","Especializacion",esp."Descripcion"
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -3647,7 +3646,7 @@ export const listarcursoxusuariov2 = async (req = request, res = response) => {
     // Consulta para saber si el usuario es premium
     const consultaPremium = `SELECT "Premium" FROM "Usuario" WHERE "IdUsuario" = ${fusuario_id}`;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const [resultado]: any = await db.query(consultaPremium);
         const esPremium = resultado?.[0]?.Premium;
 
@@ -3902,7 +3901,7 @@ GROUP BY
 	pad."NombreArchivo";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4039,7 +4038,7 @@ export const listarcursosxespecializacionv2 = async (
         pad."NombreArchivo";
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4090,7 +4089,7 @@ where   max_notas."Usuario_id"=${fusuario_id}
 GROUP BY cur."Curso"
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4146,7 +4145,7 @@ GROUP BY cur."Curso"
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4206,7 +4205,7 @@ GROUP BY cur."Curso";
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4270,7 +4269,7 @@ GROUP BY
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4307,7 +4306,7 @@ export const listarcursoslimitadosv2 = async (
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4337,7 +4336,7 @@ export const listarcursostotalesv2 = async (req = request, res = response) => {
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4370,7 +4369,7 @@ export const listarvideointrov2 = async (req = request, res = response) => {
             ) from "ProductoIntroduccion" pta where "Curso_id"=${fcurso_id}
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
         });
@@ -4407,7 +4406,7 @@ export const listarproductospreciov2 = async (req = request, res = response) => 
             vwp."Estado_id" = '1'
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
         });
@@ -4438,7 +4437,7 @@ export const listarpreguntasxencuestav2 = async (req = request, res = response) 
       order by "Orden" asc
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4469,7 +4468,7 @@ export const listarencuestasalumnoobligatoriov2 = async (
     where "Obligatorio"=1 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4489,7 +4488,7 @@ export const listarencuestasalumnoobligatoriov2 = async (
 export const responderencuestav2 = async (req = request, res = response) => {
     const { fusuario_id, fencuesta_id, frespuestas, fproducto_id } = req.body;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Consulta SQL para insertar en EncuestaRespondida SIN especificar IdEncuestaRespondida
         const sql = `
             INSERT INTO "EncuestaRespondida"("Encuesta_id", "Producto_id", "Usuario_id") 
@@ -4548,7 +4547,7 @@ export const versalasdisponiblesv2 = async (req = request, res = response) => {
     where "Producto_id"=${fproducto_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4580,7 +4579,7 @@ where sa."Producto_id"=${fproducto_id} and "Usuario_id"=${fusuario_id}
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4606,7 +4605,7 @@ export const integrarsesalav2 = async (req = request, res = response) => {
         (${fusuario_id},${fsala_id});
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4688,7 +4687,7 @@ ORDER BY "cur"."IdCurso";
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4803,7 +4802,7 @@ ORDER BY "IdEscuela";
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
         });
@@ -4840,7 +4839,7 @@ export const obtenersalasv2 = async (req = request, res = response) => {
             
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
         });
@@ -4870,7 +4869,7 @@ export const ObtenerEspe = async (req = request, res = response) => {
   select "Curso" , "IdCurso" from "Curso" LIMIT 10
   `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql); // Ejecutamos la consulta directamente
 
         // Devolvemos los resultados directamente, sin necesidad de acceder a data.rows
@@ -4896,7 +4895,7 @@ export const obtenersalasusuariosv2 = async (req = request, res = response) => {
             SELECT * FROM "SalaUsuario" where "Sala_id"=${fsala_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
         });
@@ -4936,7 +4935,7 @@ export const crearsalav2 = async (req = request, res = response) => {
          ,'${fnumeroreunion}','${fclavereunion}','${flinkwhatsapp}')  
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -4965,7 +4964,7 @@ export const obteneridproductoxcursov2 = async (req = request, res = response) =
         where pro."Curso_id"=${fcurso_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
         });
@@ -4994,7 +4993,7 @@ export const crearAreav2 = async (req = request, res = response) => {
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
         });
@@ -5022,7 +5021,7 @@ export const crearPuestov2 = async (req = request, res = response) => {
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {
         });
@@ -5062,7 +5061,7 @@ LEFT JOIN "Empleado" "em" ON "em"."Entidad_id" = "en"."IdEntidad"
 LEFT JOIN "Area" "ar" ON "ar"."IdArea" = "em"."Area_id"
 LEFT JOIN "Puesto" "pu" ON "pu"."IdPuesto" = "em"."Puesto_id"
 ORDER BY "us"."IdUsuario"`
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data = await db.query(sql, {});
         return res.status(200).json({
@@ -5112,7 +5111,7 @@ export const insertarusuariomasivov2 = async (
         entidadReplacements[`Correo${index}`] = row.Correo;
     });
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Ejecuta la inserción en Entidad
         const entidadResult = await db.query(entidadSql, {
             replacements: entidadReplacements,
@@ -5305,7 +5304,7 @@ GROUP BY
 
         `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
             replacements: {
                 IdEspecializacion: IdEspecializacion || [],
@@ -5349,7 +5348,7 @@ export const verespecializacionesmineria = async (
       ORDER BY "esp"."IdEspecializacion";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
             replacements: { Escuela }, // Reemplazamos 'Escuela'.
         });
@@ -5428,7 +5427,7 @@ export const verespecializacionesmineria = async (
 
 //     `;
 
-//     try {   const db = getSiscardRevolution();
+//     try {
 //         const data = await db.query(sql, {
 //             replacements: { IdCurso },
 //         });
@@ -5464,7 +5463,7 @@ interface Curso {
 export const getidcursoporslug = async (req: any, res: any) => {
     const { Slug } = req.body;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const findIdSql = `SELECT IdCurso FROM Curso WHERE Curso = :Slug`;
 
         // Hacemos la consulta, el primer elemento es el resultado de la consulta
@@ -5497,7 +5496,7 @@ export const getCursoDetalleBySlug = async (req = request, res = response) => {
         });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Normalizamos el slug para obtener el nombre del curso
         const normalizedSlug = slug
             .toLowerCase()
@@ -5597,7 +5596,7 @@ export const listartemariointrov2 = async (
     where pro."IdProducto"=${fproducto_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
         return res.status(200).json({
@@ -5660,7 +5659,7 @@ GROUP BY
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
         return res.status(200).json({
@@ -5722,7 +5721,7 @@ GROUP BY
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
         return res.status(200).json({
@@ -5750,7 +5749,7 @@ INSERT into "Certificado" ("CodigoCertificado","Usuario_id","Producto_id","Tipo"
 	('${fcodigocertificado}',${fusuario_id},${fproducto_id},'${ftipo}')
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
         return res.status(200).json({
@@ -5777,7 +5776,7 @@ export const asignarcursoadminv2 = async (req = request, res = response) => {
         WHERE "Usuario_id" = :usuarioId AND "Producto_id" = :productoId
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const resultado: any = await db.query(sqlValidar, {
             replacements: { usuarioId: fusuario_id, productoId: fproducto_id },
         });
@@ -5891,10 +5890,10 @@ export const AsignarMembresiasAdmin = async (req = request, res = response) => {
         return dayjs(fechaBase).add(dias, 'day').toDate();
     };
 
-    try {   const db = getSiscardRevolution();
+    try {
         const transaction = await db.transaction();
 
-        try {   const db = getSiscardRevolution();
+        try {
             // 1. Registrar la venta
             const [ventaResult] = await db.query(sqlRegistroVenta, {
                 replacements: {
@@ -5996,7 +5995,7 @@ export const CompraCuotas = async (req = request, res = response) => {
         WHERE "Usuario_id" = :usuarioId AND "Producto_id" = :productoId
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const resultado: any = await db.query(sqlValidar, {
             replacements: { usuarioId: fusuario_id, productoId: fproducto_id },
         });
@@ -6085,7 +6084,7 @@ export const acreditacionescertificadosv2 = async (
         where pro."IdProducto"=${fproducto_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -6132,11 +6131,11 @@ export const asignarcursocarritov2 = async (req = request, res = response) => {
         VALUES (:usuarioId, :productoId, 1);
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Iniciar una transacción
         const transaction = await db.transaction();
 
-        try {   const db = getSiscardRevolution();
+        try {
             // Mapear fdata e insertar datos
             for (const item of fdata) {
                 const { IdProducto, Precio } = item;
@@ -6217,11 +6216,11 @@ export const comprarplannopremiumv2 = async (req = request, res = response) => {
         VALUES (:usuarioId, :productoId, 1,:registroventaid);
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Iniciar una transacción
         const transaction = await db.transaction();
 
-        try {   const db = getSiscardRevolution();
+        try {
             // Mapear fdata e insertar datos
             for (const item of fdata) {
                 const { IdProducto, Precio } = item;
@@ -6290,7 +6289,7 @@ export const comprarplanpremiumv2 = async (
     const sql1 = `
     update  "Usuario" set "Premium"=1 where "IdUsuario"=${fusuario_id};
 `;
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
         const data1 = await db.query(sql1, {
@@ -6317,7 +6316,7 @@ export const listarplanv2 = async (
        SELECT * FROM "Plan" where "Estado_id" = '1' ;
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {});
 
 
@@ -6350,7 +6349,7 @@ export const vermodalidadescursov2 = async (
         where "Curso_id"=${fcurso_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -6374,7 +6373,7 @@ export const administradoractualizarmodalidadesv2 = async (
 ) => {
     const { fdata }: { fdata: any[] } = req.body; // Definir fdata como un array de tipo any
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Iniciar una transacción
         await db.transaction(async (t) => {
             for (const item of fdata) {
@@ -6418,7 +6417,7 @@ export const verevaluacionescursov2 = async (
         select * from "Evaluacion"  where "Curso_id"=${fcurso_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -6462,7 +6461,7 @@ where pre."BancoPregunta_id"=${fbancopregunta_id}
 GROUP BY pre."IdPregunta";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -6484,7 +6483,7 @@ export const guardarpreguntasadmin = async (req = request,
     res = response) => {
     const { preguntas, fbancopregunta_id } = req.body; // preguntas es un array de preguntas y sus respuestas.
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Iteramos sobre las preguntas y las insertamos o actualizamos.
         for (let i = 0; i < preguntas.length; i++) {
             const pregunta = preguntas[i];
@@ -6527,7 +6526,7 @@ export const listarcertificadoacreditaciones = async (
     const { fusuario_id, fproducto_id } = req.body; // fdata es un array con los datos a insertar.
 
     const consultaPremium = `SELECT "Premium" FROM "Usuario" WHERE "IdUsuario" = ${fusuario_id}`;
-        const db = getSiscardRevolution();    
+
    
         const [resultado]: any = await db.query(consultaPremium);
         const esPremium = resultado?.[0]?.Premium;
@@ -6755,7 +6754,7 @@ GROUP BY
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -6878,7 +6877,7 @@ export const listarcertificadoacreditacionesvivo = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -6906,7 +6905,7 @@ export const listarinputlayoutv2 = async (
 	where "Tipo4"='PortadaFinalEGP'
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -6973,7 +6972,7 @@ ORDER BY
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7013,7 +7012,7 @@ export const insertarpreguntav2 = async (
 );
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7052,7 +7051,7 @@ export const insertarrespuestav2 = async (
 );
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7081,7 +7080,7 @@ export const listardatosalasv2 = async (
      select * from "Sala" where "Producto_id"=${fproducto_id} and "Sala"='${fsala_id}'
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7111,7 +7110,7 @@ export const listarProductoTemariov2 = async (
      where "Curso_id"=${fcurso_id} 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7144,7 +7143,7 @@ export const listardocentesv2 = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7172,7 +7171,7 @@ export const agregardocentesalav2 = async (
         WHERE "Usuario_id" = ${fusuario_id} AND "Sala_id" = ${fsala_id};
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const countResult: any = await db.query(sqlCheck);
         const count = parseInt(countResult[0][0].count, 10);
 
@@ -7215,7 +7214,7 @@ where "Area_id"=1 and "Sala_id"=${fsala_id}
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7247,7 +7246,7 @@ export const listarcalendariov2 = async (
     where sau."Usuario_id"=${fusuario_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7281,7 +7280,7 @@ export const listarevaluacionvivov2 = async (
 		WHERE ev."IdEvaluacion"=${fevaluacion_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7311,7 +7310,7 @@ export const listarsalasevaluacionv2 = async (
         where ev."IdEvaluacion"=${fevaluacion_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7331,7 +7330,7 @@ export const listarsalasevaluacionv2 = async (
 export const agregarsalaevaluacionv2 = async (req = request, res = response) => {
     const { fsala_id, ffechainicio, ffechafin, fevaluacion_id } = req.body;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // 1. Verificar si ya existe un registro en "EvaluacionVivo" con la misma "Sala_id"
         const sqlCheckSala = `
            SELECT evv.* 
@@ -7438,7 +7437,7 @@ export const desactivaractivarusuariov2 = async (
 update "Usuario"  set "Estado_id"=${festado_id} where  "IdUsuario"=${fusuario_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7465,7 +7464,7 @@ export const eliminarusuariov2 = async (
        Delete from "Usuario" where  "IdUsuario"=${fusuario_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7522,7 +7521,7 @@ ORDER BY "Puntaje" DESC;
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7579,7 +7578,7 @@ HAVING
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7616,7 +7615,7 @@ INNER JOIN "Entidad" en ON en."IdEntidad" = us."Entidad_id"
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7644,7 +7643,7 @@ export const listarreportesv2 = async (
 SELECT * FROM "Reporte";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7666,7 +7665,7 @@ export const exportarReportesAExcel = async (req = request, res = response) => {
     const { fsql } = req.body;
     const sql = `${fsql}`;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const reportes: any = await db.query(sql);
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Reporte");
@@ -7713,7 +7712,7 @@ select "NumeroReunion","ClaveReunion" from "Sala"
 where "IdSala"=${fsala_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7742,7 +7741,7 @@ export const guardarabrireditarvaloresv2 = async (
     where "IdSala"=${fsala_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7789,7 +7788,7 @@ LEFT JOIN "MenuAsignado" ma
 WHERE m."TipoMenu_id" = 5  ;
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -7812,7 +7811,7 @@ export const guardarpermisosv2 = async (
     res = response
 ) => {
     const { fusuario_id, permisos } = req.body;
-    try {   const db = getSiscardRevolution();
+    try {
         // Obtener los permisos actuales asignados al usuario con Estado_id '1'
         const permisosActuales = await db.query(
             `SELECT "Menu_id" FROM "MenuAsignado" WHERE "Usuario_id" = :usuarioId AND "Estado_id" = '1'`,
@@ -7881,7 +7880,7 @@ export const actualizarClaveTemporal = async (req = request, res = response) => 
         });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Paso 1: Verificar si el correo existe en la tabla "Usuario"
         const consultaVerificacion = `
             SELECT "Usuario"
@@ -7940,7 +7939,7 @@ export const actualizarClaveTemporal = async (req = request, res = response) => 
             `,
         };
 
-        try {   const db = getSiscardRevolution();
+        try {
             await transporter.sendMail(mailOptions);
             console.log("Correo enviado exitosamente");
         } catch (emailError) {
@@ -8023,7 +8022,7 @@ ORDER BY pt."IdProductoTemario" ASC;
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -8051,7 +8050,7 @@ export const verificarCode = async (req = request, res = response) => {
         });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Paso 1: Verificar si el correo existe en la tabla "Usuario"
         const consultaVerificacion = `
      SELECT "ClaveTemporal", "FechaExpiracion"
@@ -8133,7 +8132,7 @@ export const actualizarnombretemario = async (req = request, res = response) => 
     }
 
 
-    try {   const db = getSiscardRevolution();
+    try {
         for (const item of data) {
             const { id, nombre, numeracion } = item;
 
@@ -8176,7 +8175,7 @@ export const actualizarcontenidotemario = async (req = request, res = response) 
         });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         for (const item of data) {
 
             for (const item1 of item.temas) {
@@ -8218,7 +8217,7 @@ Insert into "ProductoTemario" ("Curso_id","ProductoTemario","Numeracion") values
 (${fcurso_id},'${fproductotemario}','${fnumeracion}')
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -8246,7 +8245,7 @@ Insert into "ProductoTemarioContenido" ("ProductoTemario_id","ProductoTemarioCon
 (${fproductotemario_id},'${fproductotemariocontenido}')
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data = await db.query(sql, {
         });
 
@@ -8278,7 +8277,7 @@ export const cambiarestadoadmincursosv2 = async (
         update "Producto" set "Estado_id"=1 where "Curso_id"=${fcurso_id};
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         if (festado_id == '1') {
             const data = await db.query(sql, {
             });
@@ -8331,7 +8330,7 @@ export const crearevaluacionv2 = async (
 
 
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
         });
@@ -8368,7 +8367,7 @@ export const crearbancopreguntasv2 = async (
         ${fcurso_id}
     )`;
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
         });
@@ -8398,7 +8397,7 @@ export const verbancopreguntasv2 = async (
       select * from "BancoPregunta" where "Curso_id"=${fcurso_id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
         });
@@ -8428,7 +8427,7 @@ export const verbancosxevaluacionv2 = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
         });
@@ -8457,7 +8456,7 @@ export const listaradministraracreditacionv2 = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
         });
@@ -8488,7 +8487,7 @@ export const crearacreditacionv2 = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
         });
@@ -8519,7 +8518,7 @@ export const editaracreditacionv2 = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
         });
@@ -8549,7 +8548,7 @@ export const updatePassword = async (req = request, res = response) => {
         });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Paso 1: Verificar si el correo existe en la tabla "Usuario"
         const consultaVerificacion = `
             SELECT "Usuario"
@@ -8628,7 +8627,7 @@ export const vercertificadosv2 = async (
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
         });
@@ -8659,7 +8658,7 @@ export const vercertificadosxcodigov2 = async (
     where "CodigoCertificado"= :fcodigo
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
             replacements: { fcodigo },
@@ -8724,7 +8723,7 @@ export const listarnotasalumnosv2 = async (
     GROUP BY cur."Curso",en."Usuario_id",pro."IdProducto",tm."TipoModalidad";
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data: any = await db.query(sql, {
         });
@@ -8747,7 +8746,7 @@ export const listarnotasalumnosv2 = async (
 
 export const guardarnotasalumnosv2 = async (req = request, res = response) => {
     const { data } = req.body;
-    try {   const db = getSiscardRevolution();
+    try {
         if (!data) {
             return res.status(400).json({
                 ok: false,
@@ -8778,7 +8777,7 @@ export const guardarnotasalumnosv2 = async (req = request, res = response) => {
 
     } catch (err) {
         console.error("Error al guardar notas:", err);
-         const db = getSiscardRevolution();
+
         // Revertir cambios en caso de error
         await db.query("ROLLBACK");
 
@@ -8804,7 +8803,7 @@ export const VerificarCodePromo = async (req = request, res = response) => {
         });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Verificar si el cupón existe para el usuario y está activo
         const consultaVerificacion = `
             SELECT code, discount, Usuario, estado_id 
@@ -8945,10 +8944,10 @@ export const CompraMembresias = async (req = request, res = response) => {
         return dayjs(fechaBase).add(dias, 'day').toDate();
     };
 
-    try {   const db = getSiscardRevolution();
+    try {
         const transaction = await db.transaction();
 
-        try {   const db = getSiscardRevolution();
+        try {
             // Verificar membresía actual
             const [membresiaActual] = await db.query(sqlMembresiaExistente, {
                 replacements: { usuarioId: fusuario_id },
@@ -9171,10 +9170,10 @@ export const CompraMembresiasProfesional = async (req = request, res = response)
         return dayjs(fechaBase).add(dias, 'day').toDate();
     };
 
-    try {   const db = getSiscardRevolution();
+    try {
         const transaction = await db.transaction();
 
-        try {   const db = getSiscardRevolution();
+        try {
             // Verificar membresía actual
             const [membresiaActual] = await db.query(sqlMembresiaExistente, {
                 replacements: { usuarioId: fusuario_id },
@@ -9365,10 +9364,10 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
         return dayjs(fechaBase).add(dias, 'day').toDate();
     };
 
-    try {   const db = getSiscardRevolution();
+    try {
         const transaction = await db.transaction();
 
-        try {   const db = getSiscardRevolution();
+        try {
             // 1. Registrar la venta
             const [ventaResult] = await db.query(sqlRegistroVenta, {
                 replacements: {
@@ -9485,10 +9484,10 @@ export const ExtenderMembresia = async (req = request, res = response) => {
         });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         const transaction = await db.transaction();
 
-        try {   const db = getSiscardRevolution();
+        try {
             // Buscar la membresía activa
             const [membresiaActiva] = await db.query(`
           SELECT "IdMembresia", "FechaExpiracion"
@@ -9604,7 +9603,7 @@ export const UsuariosData = async (req = request, res = response) => {
 `
 
 
-    try {   const db = getSiscardRevolution();
+    try {
         const [results,] = await db.query(sqlDataUsuario, {
             replacements: { fusuario_id: fusuario_id },
         });
@@ -9646,7 +9645,7 @@ export const obtenerPagosQR = async (req = request, res = response) => {
         ORDER BY p."FechaPago" DESC;
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data: any = await db.query(sql, {});
         return res.status(200).json({
             ok: true,
@@ -9671,7 +9670,7 @@ export const actualizarEstadoPagoQR = async (req = request, res = response) => {
         WHERE "Id" = ${id}
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         await db.query(sql, {});
         return res.status(200).json({
             ok: true,
@@ -9696,7 +9695,7 @@ export const ListTipopago = async (req = request, res = response) => {
        Select "IdTipoPago","TipoPago" from "TipoPago" where "Status" = 1
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data: any = await db.query(sql, {});
         return res.status(200).json({
             ok: true,
@@ -9717,7 +9716,7 @@ export const ListPlan = async (req = request, res = response) => {
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data: any = await db.query(sql, {});
         return res.status(200).json({
             ok: true,
@@ -9761,7 +9760,7 @@ export const ListProductoStockUser = async (req = request, res = response) => {
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data: any = await db.query(sql, {
             replacements: { UserId: Usuario },
 
@@ -9791,7 +9790,7 @@ export const UpdateProductoStockUser = async (req = request, res = response) => 
 
     `;
 
-    try {   const db = getSiscardRevolution();
+    try {
         const data: any = await db.query(sql, {
             replacements: { UserId: Usuario,Typepagos: TypeBuy,ProductoStock:ProductoStockId  },
 
@@ -9853,7 +9852,7 @@ export const ListUserData = async(req = request ,res =response) =>{
 	
 	`
 
-    try {   const db = getSiscardRevolution();
+    try {
 
         const data:any = await db.query(sql,{
             replacements: {
@@ -9895,7 +9894,7 @@ export const UpdateUserData = async (req = request, res = response) => {
         // FechaExpiracion
     } = req.body;
 
-    try {   const db = getSiscardRevolution();
+    try {
         // Validar que los campos requeridos existan
         if (!IdUsuario) {
             return res.status(400).json({
@@ -9992,7 +9991,7 @@ export const ActualizarMembresiaYRegistroVenta = async (req = request, res = res
         });
     }
 
-    try {   const db = getSiscardRevolution();
+    try {
         const transaction = await db.transaction();
 
         // 1. Buscar membresía activa más reciente del usuario

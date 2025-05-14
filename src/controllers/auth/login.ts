@@ -1,6 +1,6 @@
 
 import { request, response } from "express";
-import { getSiscardRevolution } from "../../db/connection";
+import db from "../../db/connection";
 
 export const buscarUsuario = async (req = request, res = response) => {
   const { pUsuario } = req.body;
@@ -57,7 +57,7 @@ export const buscarUsuario = async (req = request, res = response) => {
 `;
 
   try {
-     const db = getSiscardRevolution();
+    
     // Ejecutar la consulta SQL directamente usando sequelize.query
     const data = await db.query(sql, {
       replacements: {}, // Parámetro para evitar inyecciones SQL
