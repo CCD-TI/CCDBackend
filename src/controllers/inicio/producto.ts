@@ -10086,3 +10086,77 @@ export const ActualizarMembresiaYRegistroVenta = async (req = request, res = res
         });
     }
 };
+
+
+
+export const eliminarProductoStockYVenta = async (req = request, res = response) => {
+  const { IdProductoStock } = req.body;
+
+  if (!IdProductoStock) {
+    return res.status(400).json({
+      ok: false,
+      msg: "IdProductoStock es requerido"
+    });
+  }
+
+  const client = await db 
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Obtener el RegistroVenta_id
+    const selectSql = `
+      SELECT "RegistroVenta_id"
+      FROM "ProductoStock"
+      WHERE "IdProductoStock" = :idProductoStock
+    `;
+    const result = await client.query(selectSql, {
+      replacements: { idProductoStock: IdProductoStock },
+    }) as any;
+
+    if (result[0].length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        ok: false,
+        msg: 'Producto no encontrado',
+      });
+    }
+
+    const registroVentaId = result[0][0].RegistroVenta_id;
+
+    // 2. Eliminar ProductoStock
+    const deleteProductoSql = `
+      DELETE FROM "ProductoStock"
+      WHERE "IdProductoStock" = :idProductoStock
+    `;
+    await client.query(deleteProductoSql, {
+      replacements: { idProductoStock: IdProductoStock },
+    });
+
+    // 3. Eliminar RegistroVenta (si existe)
+    if (registroVentaId) {
+      const deleteVentaSql = `
+        DELETE FROM "RegistroVenta"
+        WHERE "IdRegistroVenta" = :registroVentaId
+      `;
+      await client.query(deleteVentaSql, {
+        replacements: { registroVentaId },
+      });
+    }
+
+    await client.query('COMMIT');
+
+    return res.status(200).json({
+      ok: true,
+      msg: 'Producto y registro de venta eliminados correctamente',
+    });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error al eliminar producto o venta:', err);
+    return res.status(500).json({
+      ok: false,
+      msg: 'Error al eliminar producto o registro de venta',
+    });
+  }
+};
