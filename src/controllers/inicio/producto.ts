@@ -5939,7 +5939,7 @@ export const AsignarMembresiasAdmin = async (req = request, res = response) => {
             const [membresiaResult] = await db.query(sqlInsertMembresia, {
                 replacements: {
                     usuarioId: fusuario_id,
-                    planNombre: fplan_nombre,
+                    planNombre: fplan_id,
                     fechaInicio: fechaInicioMembresia.toDate(),
                     fechaExpiracion: nuevaFechaExpiracion,
                     tipopago: ftipopago,
@@ -6541,7 +6541,7 @@ export const listarcertificadoacreditaciones = async (
 
         // Variable para seleccionar TipoPago_Id
         const selectTipoPago = esPremium
-            ? `NULL AS "TipoPago_Id"` // Si es premium, devolvemos NULL
+            ? `(select "TipoPago_Id" from membresias where "UsuarioId" = ${fusuario_id} AND "Status" = 1) AS "TipoPago_Id"` // Si es premium, devolvemos NULL
             : `pst."TipoPago_Id" AS "TipoPago_Id"`; // Si no es premium, obtenemos el valor real
     const sql = `
  
@@ -9411,7 +9411,7 @@ export const CompraMembresiasPremium = async (req = request, res = response) => 
             const [membresiaResult] = await db.query(sqlInsertMembresia, {
                 replacements: {
                     usuarioId: fusuario_id,
-                    planNombre: fplan_nombre,
+                    planNombre: fplan_id,
                     fechaInicio: fechaInicioMembresia.toDate(),
                     fechaExpiracion: nuevaFechaExpiracion,
                 },
@@ -9820,8 +9820,7 @@ export const ListUserData = async(req = request ,res =response) =>{
 
    const sql  = `
    
-           SELECT 
-                "ent"."Nombres",
+            SELECT  "ent"."Nombres",
                 "ent"."Apellidos",
                 "ent"."TipoDocumento_id",
                 "tp"."TipoDocumento",
@@ -9833,7 +9832,9 @@ export const ListUserData = async(req = request ,res =response) =>{
                 "user"."Usuario",
                 "user"."Clave",
                 "user"."RutaImagenPerfil",
-                "mem"."Plan",
+                "p"."Plan",
+				"p"."IdPlan",
+				"mem"."TipoPago_Id",
                 "mem"."FechaInicio",
                 "mem"."FechaExpiracion"
             FROM 
@@ -9841,11 +9842,13 @@ export const ListUserData = async(req = request ,res =response) =>{
             JOIN 
                 "Entidad" "ent" ON "ent"."IdEntidad" = "user"."Entidad_id"
             LEFT JOIN 
-                membresias "mem" ON "mem"."UsuarioId" = "user"."IdUsuario"
+                membresias "mem" ON "mem"."UsuarioId" = "user"."IdUsuario" AND "mem"."Status" = 1
+            LEFT JOIN
+                "Plan" "p" ON "p"."IdPlan" = "mem"."Plan"
             LEFT JOIN 
                 "TipoDocumento" "tp" ON "tp"."IdTipoDocumento" = "ent"."TipoDocumento_id"
             WHERE 
-                "user"."IdUsuario" = :UsuarioId;
+                "user"."IdUsuario" = :UsuarioId 
 
 
 	
@@ -10028,17 +10031,17 @@ export const ActualizarMembresiaYRegistroVenta = async (req = request, res = res
         const nuevaFechaExpiracion = dayjs().add(parseInt(fduracion_dias), 'day').toDate();
 
         await db.query(`
-            UPDATE "membresias"
+            UPDATE membresias
             SET 
                 "Plan" = :planNombre,
                 "FechaExpiracion" = :fechaExpiracion,
                 "UpdatedAt" = CURRENT_TIMESTAMP,
                 "TipoPago_Id" = :tipoPago,
-                "UltimoUserMod" = :UltimoUser
+                "UltimoUSerMod" = :UltimoUser
             WHERE "IdMembresia" = :idMembresia;
         `, {
             replacements: {
-                planNombre: fplan_nombre,
+                planNombre: fplan_id,
                 fechaExpiracion: nuevaFechaExpiracion,
                 UltimoUser:UltimoUSerMod,
                 tipoPago: ftipopago,
