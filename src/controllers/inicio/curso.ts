@@ -45,6 +45,7 @@ export const getcursodetalle = async (req = request, res = response) => {
     MAX(pat."HorasAcademicas") AS "HorasAcademicas",
     MAX(pat."Estado_id") AS "Estado_id",
     MAX(pat."UltimaFechMod") AS "UltimaFechMod",
+    MAX(pat."NumeroWhatsapp") AS "NumeroWhatsapp",
     "esc"."Escuela" AS "Escuela",
     "esp"."Especializacion" AS "Especializacion",
     "cur"."IdCurso" AS "IdCurso",
