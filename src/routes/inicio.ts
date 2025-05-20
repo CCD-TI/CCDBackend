@@ -198,7 +198,9 @@ import {
     ListUserData,
     UpdateUserData,
     ActualizarMembresiaYRegistroVenta,
-    eliminarProductoStockYVenta
+    eliminarProductoStockYVenta,
+    listarencuesta,
+    UpdateIntentos
 } from '../controllers/inicio/producto';
 
 
@@ -607,8 +609,8 @@ router.post('/guardar-atributos-admin', upload.none(), async (req: Request, res:
 
 
         };
-        await handleFileOperation(PBrochure, 'Documentos', 'Pdf', 'Cursos', 'BrochureCursos');
-        await handleFileOperation(PPortada, 'Multimedia', 'Imagen', 'Cursos', 'PortadaFinal');
+        await handleFileOperation(PBrochure, 'Documentos', 'Pdf', 'CursosEGP', 'BrochureCursos');
+        await handleFileOperation(PPortada, 'Multimedia', 'Imagen', 'CursosEGP', 'PortadaFinalEGP');
         const sqlv1 = `
        	select * from "ProductoAtributo" Where "Curso_id"=${pcurso_id}
         `;
@@ -1015,7 +1017,7 @@ router.post('/ListUserData', ListUserData)
 router.post('/eliminarProductoStockYVenta', eliminarProductoStockYVenta)
 router.put('/UpdateUserData', UpdateUserData)
 router.put('/ActualizarMembresiaYRegistroVenta', ActualizarMembresiaYRegistroVenta)
-
+router.put("/UpdateIntentos",UpdateIntentos)
 
 
 
@@ -1028,6 +1030,7 @@ router.post('/listarpermisosv2', listarpermisosv2)
 router.post('/guardarpermisosv2', guardarpermisosv2)
 
 router.post('/getcursodetalle', getcursodetalle)
+router.post('/listarencuesta', listarencuesta)
 router.post('/frontgetcursodetalle', frontgetcursodetalle)
 router.post('/getescuela', getescuela)
 router.post('/escuelagetcursodetalle', escuelagetcursodetalle)

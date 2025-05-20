@@ -36,7 +36,7 @@ const s3 = new AWS.S3({
 });
 
 export const SubirDocumentoUsuario = async (req = request, res = response) => {
-    const { fusuario_id, ftelefono,fcursoId } = req.body;
+    const { fusuario_id, ftelefono, fcursoId } = req.body;
     const file = req.file;
 
     if (!fusuario_id || !ftelefono || !file) {
@@ -82,16 +82,16 @@ export const SubirDocumentoUsuario = async (req = request, res = response) => {
             'sistemas'
         );
     `;
-    
-    await db.query(sqlInsert, {
-        replacements: {
-            usuarioId: fusuario_id,
-            telefono: ftelefono,
-            urlImagen: filename,
-            archer: fcursoId
-        },
-    });
-    
+
+        await db.query(sqlInsert, {
+            replacements: {
+                usuarioId: fusuario_id,
+                telefono: ftelefono,
+                urlImagen: filename,
+                archer: fcursoId
+            },
+        });
+
 
         return res.status(200).json({
             ok: true,
@@ -3225,7 +3225,7 @@ export const listarevaluacionesnotaxusuariov2 = async (
 
     // Ajusta la consulta SQL a tus necesidades
     const sql = `
-         select "TipoEvaluacion","IdEvaluacion","eno"."IdEvaluacionNota","Nota","Intento",eno."Producto_id","Evaluacion","eva"."Duracion","eva"."Intentos" ,"eva"."Intentos"from "Evaluacion" "eva"
+         select "TipoEvaluacion","IdEvaluacion","eno"."IdEvaluacionNota","Nota","Intento","IntentosR",eno."Producto_id","Evaluacion","eva"."Duracion","eva"."Intentos" ,"eva"."Intentos"from "Evaluacion" "eva"
         inner join "EvaluacionNota" "eno"  on "eno"."Evaluacion_id"="eva"."IdEvaluacion"
         where "Usuario_id"=${fusuario_id}	and "IdEvaluacion"=${fevaluacion_id} and eno."Sala_id" is null
         `;
@@ -4353,8 +4353,6 @@ export const listarcursostotalesv2 = async (req = request, res = response) => {
     }
 };
 
-
-
 export const listarvideointrov2 = async (req = request, res = response) => {
     const { fcurso_id } = req.body;
 
@@ -4528,7 +4526,7 @@ export const responderencuestav2 = async (req = request, res = response) => {
             ok: true,
             msg: "Encuesta respondida con éxito",
         });
-    } catch (err:any) {
+    } catch (err: any) {
         console.error(err);
         return res.status(400).json({
             ok: false,
@@ -5768,7 +5766,7 @@ INSERT into "Certificado" ("CodigoCertificado","Usuario_id","Producto_id","Tipo"
 
 
 export const asignarcursoadminv2 = async (req = request, res = response) => {
-    const { fproducto_id, ftipoPago,fusuario_id, fprecio , fUserMod } = req.body;
+    const { fproducto_id, ftipoPago, fusuario_id, fprecio, fUserMod } = req.body;
 
     // Validar si el usuario ya tiene el curso
     const sqlValidar = `
@@ -5797,8 +5795,8 @@ export const asignarcursoadminv2 = async (req = request, res = response) => {
         `;
         const result = await db.query(sqlInsertVenta, {
             replacements: { usuarioId: fusuario_id, productoId: fproducto_id, precio: fprecio },
-            
-        })as any;
+
+        }) as any;
         const idVenta = result[0][0].IdRegistroVenta;
 
         // Insertar el stock del producto
@@ -5807,7 +5805,7 @@ export const asignarcursoadminv2 = async (req = request, res = response) => {
             VALUES (:usuarioId, :productoId, 1 ,:ftipoPagos,${idVenta},:Usermodify )
         `;
         await db.query(sqlInsertStock, {
-            replacements: { usuarioId: fusuario_id, productoId: fproducto_id,ftipoPagos: ftipoPago, Usermodify:fUserMod },
+            replacements: { usuarioId: fusuario_id, productoId: fproducto_id, ftipoPagos: ftipoPago, Usermodify: fUserMod },
         });
 
         return res.status(200).json({
@@ -5824,9 +5822,9 @@ export const asignarcursoadminv2 = async (req = request, res = response) => {
 };
 
 export const AsignarMembresiasAdmin = async (req = request, res = response) => {
-    const { fusuario_id, fplan_id, fprecioplan, fplan_nombre, fduracion_dias , UltimoUSerMod ,ftipopago } = req.body;
-    
-    if (!fusuario_id || !fplan_id || !fprecioplan || !fplan_nombre || !fduracion_dias|| !UltimoUSerMod || !ftipopago ) {
+    const { fusuario_id, fplan_id, fprecioplan, fplan_nombre, fduracion_dias, UltimoUSerMod, ftipopago } = req.body;
+
+    if (!fusuario_id || !fplan_id || !fprecioplan || !fplan_nombre || !fduracion_dias || !UltimoUSerMod || !ftipopago) {
         return res.status(400).json({
             ok: false,
             msg: "Faltan datos obligatorios (usuario, plan, precio, nombre del plan o duración del plan).",
@@ -5900,8 +5898,8 @@ export const AsignarMembresiasAdmin = async (req = request, res = response) => {
                     usuarioId: fusuario_id,
                     plan_id: fplan_id,
                     precioVenta: fprecioplan,
-                    sqlRegistroVenta:sqlRegistroVenta,
-                    UltimoUSer:UltimoUSerMod
+                    sqlRegistroVenta: sqlRegistroVenta,
+                    UltimoUSer: UltimoUSerMod
                 },
                 transaction,
             }) as any[];
@@ -5944,7 +5942,7 @@ export const AsignarMembresiasAdmin = async (req = request, res = response) => {
                     fechaExpiracion: nuevaFechaExpiracion,
                     tipopago: ftipopago,
                     UltimoUSerMods: UltimoUSerMod,
-                    RegistroVenta:idRegistroVenta
+                    RegistroVenta: idRegistroVenta
                 },
                 transaction,
             }) as any[];
@@ -6527,22 +6525,22 @@ export const listarcertificadoacreditaciones = async (
 
     const consultaPremium = `SELECT "Premium" FROM "Usuario" WHERE "IdUsuario" = ${fusuario_id}`;
 
-   
-        const [resultado]: any = await db.query(consultaPremium);
-        const esPremium = resultado?.[0]?.Premium;
 
-        const condicionJoinStock = esPremium
-            ? '' // No filtrar por ProductoStock si es premium
-            : 'INNER JOIN "ProductoStock" pst ON pst."Producto_id" = pro."IdProducto"';
+    const [resultado]: any = await db.query(consultaPremium);
+    const esPremium = resultado?.[0]?.Premium;
 
-        const condicionWhereStock = esPremium
-            ? ''
-            : `pst."Usuario_id"  = ${fusuario_id} AND`;
+    const condicionJoinStock = esPremium
+        ? '' // No filtrar por ProductoStock si es premium
+        : 'INNER JOIN "ProductoStock" pst ON pst."Producto_id" = pro."IdProducto"';
 
-        // Variable para seleccionar TipoPago_Id
-        const selectTipoPago = esPremium
-            ? `(select "TipoPago_Id" from membresias where "UsuarioId" = ${fusuario_id} AND "Status" = 1) AS "TipoPago_Id"` // Si es premium, devolvemos NULL
-            : `pst."TipoPago_Id" AS "TipoPago_Id"`; // Si no es premium, obtenemos el valor real
+    const condicionWhereStock = esPremium
+        ? ''
+        : `pst."Usuario_id"  = ${fusuario_id} AND`;
+
+    // Variable para seleccionar TipoPago_Id
+    const selectTipoPago = esPremium
+        ? `(select "TipoPago_Id" from membresias where "UsuarioId" = ${fusuario_id} AND "Status" = 1) AS "TipoPago_Id"` // Si es premium, devolvemos NULL
+        : `pst."TipoPago_Id" AS "TipoPago_Id"`; // Si no es premium, obtenemos el valor real
     const sql = `
  
   WITH ProfesoresProcesados AS (
@@ -8696,7 +8694,7 @@ export const listarnotasalumnosv2 = async (
     const { fusuario_id } = req.body;
 
     const sql = `
-    SELECT 
+      SELECT 
 	pro."IdProducto",
 	tm."TipoModalidad",
 	en."Usuario_id",
@@ -8705,13 +8703,15 @@ export const listarnotasalumnosv2 = async (
         json_build_object(
             'IdEvaluacion', ev."IdEvaluacion",
             'Evaluacion', ev."Evaluacion",
+			'IntentosR', ev."IntentosR",
             'TipoEvaluacion', 
                 CASE 
                     WHEN ev."TipoEvaluacion" = '1' THEN 'Parcial'
                     WHEN ev."TipoEvaluacion" = '2' THEN 'Final'
                     ELSE 'Otro'
                 END,
-            'Nota', en."Nota"
+            'Nota', en."Nota",
+             'Intento',en."Intento"
         )
     ) AS Evaluaciones
     FROM "EvaluacionNota" en
@@ -9662,7 +9662,7 @@ export const obtenerPagosQR = async (req = request, res = response) => {
 };
 
 export const actualizarEstadoPagoQR = async (req = request, res = response) => {
-    const {id, status } = req.body;
+    const { id, status } = req.body;
 
     const sql = `
         UPDATE "PagosImgQR" 
@@ -9732,7 +9732,7 @@ export const ListPlan = async (req = request, res = response) => {
     }
 };
 export const ListProductoStockUser = async (req = request, res = response) => {
-        const { Usuario } = req.body
+    const { Usuario } = req.body
 
     const sql = `
        	SELECT 
@@ -9780,7 +9780,7 @@ export const ListProductoStockUser = async (req = request, res = response) => {
 };
 
 export const UpdateProductoStockUser = async (req = request, res = response) => {
-        const { TypeBuy , Usuario ,ProductoStockId} = req.body
+    const { TypeBuy, Usuario, ProductoStockId } = req.body
 
     const sql = `
        
@@ -9792,7 +9792,7 @@ export const UpdateProductoStockUser = async (req = request, res = response) => 
 
     try {
         const data: any = await db.query(sql, {
-            replacements: { UserId: Usuario,Typepagos: TypeBuy,ProductoStock:ProductoStockId  },
+            replacements: { UserId: Usuario, Typepagos: TypeBuy, ProductoStock: ProductoStockId },
 
         });
         return res.status(200).json({
@@ -9810,15 +9810,15 @@ export const UpdateProductoStockUser = async (req = request, res = response) => 
 };
 
 
-export const ListUserData = async(req = request ,res =response) =>{
-    const{Usuario} = req.body
+export const ListUserData = async (req = request, res = response) => {
+    const { Usuario } = req.body
 
     // if(!Usuario){
 
-        
+
     // }
 
-   const sql  = `
+    const sql = `
    
             SELECT  "ent"."Nombres",
                 "ent"."Apellidos",
@@ -9857,18 +9857,18 @@ export const ListUserData = async(req = request ,res =response) =>{
 
     try {
 
-        const data:any = await db.query(sql,{
+        const data: any = await db.query(sql, {
             replacements: {
-                UsuarioId:Usuario
+                UsuarioId: Usuario
             }
         });
-         return res.status(200).json({
+        return res.status(200).json({
             ok: true,
             msg: "cambios Realizados correctamente",
             data: data[0], // solo los resultados
         });
-        
-     } catch (err) {
+
+    } catch (err) {
         console.error("Error al traer la data ", err);
         return res.status(500).json({
             ok: false,
@@ -9974,7 +9974,7 @@ export const UpdateUserData = async (req = request, res = response) => {
             msg: "Datos actualizados correctamente"
         });
 
-    } catch (err:any) {
+    } catch (err: any) {
         console.error("Error al actualizar los datos: ", err);
         return res.status(500).json({
             ok: false,
@@ -10043,7 +10043,7 @@ export const ActualizarMembresiaYRegistroVenta = async (req = request, res = res
             replacements: {
                 planNombre: fplan_id,
                 fechaExpiracion: nuevaFechaExpiracion,
-                UltimoUser:UltimoUSerMod,
+                UltimoUser: UltimoUSerMod,
                 tipoPago: ftipopago,
                 idMembresia: IdMembresia
             },
@@ -10064,7 +10064,7 @@ export const ActualizarMembresiaYRegistroVenta = async (req = request, res = res
                 nuevoPlanId: fplan_id,
                 nuevoPrecio: fprecioplan,
                 registroVentaId: RegistroVentaId,
-                UltimoUser:UltimoUSerMod
+                UltimoUser: UltimoUSerMod
             },
             transaction
         });
@@ -10088,75 +10088,141 @@ export const ActualizarMembresiaYRegistroVenta = async (req = request, res = res
 };
 
 
-
 export const eliminarProductoStockYVenta = async (req = request, res = response) => {
-  const { IdProductoStock } = req.body;
+    const { IdProductoStock } = req.body;
 
-  if (!IdProductoStock) {
-    return res.status(400).json({
-      ok: false,
-      msg: "IdProductoStock es requerido"
-    });
-  }
+    if (!IdProductoStock) {
+        return res.status(400).json({
+            ok: false,
+            msg: "IdProductoStock es requerido"
+        });
+    }
 
-  const client = await db 
+    const client = await db
 
-  try {
-    await client.query('BEGIN');
+    try {
+        await client.query('BEGIN');
 
-    // 1. Obtener el RegistroVenta_id
-    const selectSql = `
+        // 1. Obtener el RegistroVenta_id
+        const selectSql = `
       SELECT "RegistroVenta_id"
       FROM "ProductoStock"
       WHERE "IdProductoStock" = :idProductoStock
     `;
-    const result = await client.query(selectSql, {
-      replacements: { idProductoStock: IdProductoStock },
-    }) as any;
+        const result = await client.query(selectSql, {
+            replacements: { idProductoStock: IdProductoStock },
+        }) as any;
 
-    if (result[0].length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        ok: false,
-        msg: 'Producto no encontrado',
-      });
-    }
+        if (result[0].length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+                ok: false,
+                msg: 'Producto no encontrado',
+            });
+        }
 
-    const registroVentaId = result[0][0].RegistroVenta_id;
+        const registroVentaId = result[0][0].RegistroVenta_id;
 
-    // 2. Eliminar ProductoStock
-    const deleteProductoSql = `
+        // 2. Eliminar ProductoStock
+        const deleteProductoSql = `
       DELETE FROM "ProductoStock"
       WHERE "IdProductoStock" = :idProductoStock
     `;
-    await client.query(deleteProductoSql, {
-      replacements: { idProductoStock: IdProductoStock },
-    });
+        await client.query(deleteProductoSql, {
+            replacements: { idProductoStock: IdProductoStock },
+        });
 
-    // 3. Eliminar RegistroVenta (si existe)
-    if (registroVentaId) {
-      const deleteVentaSql = `
+        // 3. Eliminar RegistroVenta (si existe)
+        if (registroVentaId) {
+            const deleteVentaSql = `
         DELETE FROM "RegistroVenta"
         WHERE "IdRegistroVenta" = :registroVentaId
       `;
-      await client.query(deleteVentaSql, {
-        replacements: { registroVentaId },
-      });
+            await client.query(deleteVentaSql, {
+                replacements: { registroVentaId },
+            });
+        }
+
+        await client.query('COMMIT');
+
+        return res.status(200).json({
+            ok: true,
+            msg: 'Producto y registro de venta eliminados correctamente',
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error al eliminar producto o venta:', err);
+        return res.status(500).json({
+            ok: false,
+            msg: 'Error al eliminar producto o registro de venta',
+        });
+    }
+};
+
+export const listarencuesta = async (
+    req = request,
+    res = response
+) => {
+
+    const sql = `
+     select * from "Encuesta";
+
+    `;
+
+    try {
+
+        const data: any = await db.query(sql, {
+        });
+
+        return res.status(200).json({
+            ok: true,
+            msg: "Especializaciones obtenidas correctamente",
+            data: data,
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(400).json({
+            ok: false,
+            msg: "Error al obtener especializaciones",
+        });
+    }
+};
+
+
+export const UpdateIntentos = async (req = request, res = response) => {
+
+    const { IdEvaluacion, intentoPlus, user } = req.body
+
+
+    const sql =
+        `
+        UPDATE "Evaluacion"
+        SET "IntentosR" = :intentos,
+              "UltimoUserMod" = :useradmin
+             
+        WHERE "IdEvaluacion" =:Ideva
+        `
+    try {
+         await db.query(sql, {
+            replacements: {
+
+                Ideva: IdEvaluacion,
+                intentos: intentoPlus,
+                useradmin: user
+
+            }
+        })
+        return res.status(200).json({
+            ok:true,
+            message: "Intentos actualizados Correctamente"
+        })    
+    } catch (error) {
+        return res.status(500).json({
+            ok:false,
+            message:"cambios no efectuados correctamente"
+        })
     }
 
-    await client.query('COMMIT');
-
-    return res.status(200).json({
-      ok: true,
-      msg: 'Producto y registro de venta eliminados correctamente',
-    });
-
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error al eliminar producto o venta:', err);
-    return res.status(500).json({
-      ok: false,
-      msg: 'Error al eliminar producto o registro de venta',
-    });
-  }
-};
+}
