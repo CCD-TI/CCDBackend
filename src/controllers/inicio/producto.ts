@@ -4385,6 +4385,110 @@ export const listarvideointrov2 = async (req = request, res = response) => {
     }
 };
 
+export const obtenerSoloProgreso = async (req = request, res = response) => {
+  const { fusuario_id } = req.body;
+
+  const consultaPremium = `SELECT "Premium" FROM "Usuario" WHERE "IdUsuario" = ${fusuario_id}`;
+
+  try {
+    const [resultado]: any = await db.query(consultaPremium);
+    const esPremium = resultado?.[0]?.Premium;
+
+    const condicionJoinStock = esPremium
+      ? ''
+      : 'INNER JOIN "ProductoStock" "pst" ON "pst"."Producto_id" = "pro"."IdProducto"';
+
+    const condicionWhereStock = esPremium
+      ? ''
+      : `AND "pst"."Usuario_id" = ${fusuario_id}`;
+
+    // Query para obtener el progreso
+    const sqlProgreso = `
+      SELECT 
+        SUM(CASE WHEN "Progreso" = 4 THEN 1 ELSE 0 END) AS "Terminados",
+        SUM(CASE WHEN "Progreso" BETWEEN 1 AND 3 THEN 1 ELSE 0 END) AS "EnDesarrollo"
+      FROM (
+        SELECT
+          (
+            CASE 
+              WHEN "tmo"."TipoModalidad" = 'En Vivo'
+              THEN (
+                SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                FROM "Evaluacion" ev
+                LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                WHERE ev."Curso_id" = "cur"."IdCurso"
+                AND evn."IdEvaluacionNota" IS NOT NULL 
+                AND evn."Sala_id" = "sa"."IdSala"
+                AND evn."Usuario_id" = ${fusuario_id}
+              )
+              WHEN "tmo"."TipoModalidad" = 'Asincrónico'
+              THEN (
+                SELECT COUNT(DISTINCT ev."IdEvaluacion")
+                FROM "Evaluacion" ev
+                LEFT JOIN "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+                WHERE ev."Curso_id" = "cur"."IdCurso"
+                AND evn."IdEvaluacionNota" IS NOT NULL 
+                AND evn."Sala_id" IS NULL
+                AND evn."Usuario_id" = ${fusuario_id}
+              )
+              ELSE 0
+            END
+          ) + (
+            SELECT COUNT(DISTINCT e."IdEncuesta")
+            FROM "Encuesta" e
+            LEFT JOIN "EncuestaRespondida" er ON er."Encuesta_id" = e."IdEncuesta"
+            WHERE er."Producto_id" = "pro"."IdProducto" 
+            AND er."Usuario_id" = ${fusuario_id}
+          ) AS "Progreso"
+        FROM "Producto" "pro"
+        INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
+        INNER JOIN "Especializacion" "esp" ON "esp"."IdEspecializacion" = "cur"."Especializacion_id"
+        INNER JOIN "Escuela" "esc" ON "esc"."IdEscuela" = "esp"."Escuela_id"
+        INNER JOIN "TipoCurso" "tpo" ON "tpo"."IdTipoCurso" = "cur"."TipoCurso_id"
+        INNER JOIN "TipoModalidad" "tmo" ON "tmo"."IdTipoModalidad" = "pro"."TipoModalidad_id"
+        LEFT JOIN "Sala" "sa" ON "sa"."Producto_id" = "pro"."IdProducto"
+        ${condicionJoinStock}
+        WHERE "cur"."Estado_id" = '1' ${condicionWhereStock}
+      ) subquery;
+    `;
+
+    // Query para obtener el conteo de cursos
+    const sqlConteo = esPremium
+      ? `
+        SELECT COUNT(DISTINCT "cur"."IdCurso") AS "TotalCursos"
+        FROM "Curso" "cur"
+        WHERE "cur"."Estado_id" ='1';
+      `
+      : `
+        SELECT COUNT(DISTINCT "cur"."IdCurso") AS "TotalCursos"
+        FROM "Curso" "cur"
+        INNER JOIN "Producto" "pro" ON "pro"."Curso_id" = "cur"."IdCurso"
+        INNER JOIN "ProductoStock" "pst" ON "pst"."Producto_id" = "pro"."IdProducto"
+        WHERE "cur"."Estado_id" ='1'
+        AND "pst"."Usuario_id" = ${fusuario_id};
+      `;
+
+    // Ejecutar ambas consultas
+    const [progreso]: any = await db.query(sqlProgreso);
+    const [conteo]: any = await db.query(sqlConteo);
+
+    return res.status(200).json({
+      ok: true,
+      msg: "Progreso y conteo de cursos obtenidos correctamente",
+      data: {
+        ...progreso[0],
+        TotalCursos: conteo[0]?.TotalCursos || 0
+      },
+    });
+  } catch (err: any) {
+    console.error('Error al obtener progreso del estudiante:', err);
+    return res.status(400).json({
+      ok: false,
+      msg: "Error de conexión",
+      error: err.message,
+    });
+  }
+};
 
 
 export const listarproductospreciov2 = async (req = request, res = response) => {
@@ -4655,11 +4759,19 @@ SELECT
     "cur"."IdCurso",
     "cur"."Curso",
     "tpo"."TipoCurso",
-    (SELECT 
-        JSON_AGG(CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo"))
-     FROM "ProductoAdjunto" "pad"
-     WHERE "pad"."Curso_id" = "cur"."IdCurso"
-    ) AS "RutaImagen",
+    (
+  SELECT 
+    JSON_AGG(
+      CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo")
+      ORDER BY 
+        CASE 
+          WHEN "pad"."Tipo1" = 'Multimedia' AND "pad"."Tipo2" = 'Imagen' THEN 0
+          ELSE 1
+        END
+    )
+  FROM "ProductoAdjunto" "pad"
+  WHERE "pad"."Curso_id" = "cur"."IdCurso"
+) AS "RutaImagen",
     (SELECT COUNT(*) 
      FROM "ProductoTemario" 
      WHERE "Curso_id" = "cur"."IdCurso"
@@ -10225,4 +10337,48 @@ export const UpdateIntentos = async (req = request, res = response) => {
         })
     }
 
+}
+
+
+// NUEVOS ENDPOINTS PLATAFORMA 
+
+export const ObtenerCertificados = async(req= request , res=response)=>{
+
+    const { IdUsuario } = req.body;
+
+    const sql = `
+
+        SELECT 
+            "cur"."Curso",
+            "cer"."RutaImagenDelante",
+            "cer"."RutaImagenDetras",
+            "cer"."CodigoCertificado",
+            '/' || "pa"."Tipo1" || '/' || "pa"."Tipo2" || '/' || "pa"."Tipo3" || '/' || "pa"."Tipo4" || '/' || "pa"."NombreArchivo" AS "RutaPortada"
+            FROM "Certificado" "cer"
+            INNER JOIN "Producto" "pro" ON "pro"."IdProducto" = "cer"."Producto_id"
+            INNER JOIN "Curso" "cur" ON "cur"."IdCurso" = "pro"."Curso_id"
+            INNER JOIN "ProductoAdjunto" "pa" ON "pa"."Curso_id" = "cur"."IdCurso"
+            WHERE "Usuario_id" = :usuarioidentity AND "pa"."Tipo4" = 'PortadaFinalEGP'
+    
+    `
+
+
+    try {
+        
+        const data = await db.query(sql,{
+            replacements:{ usuarioidentity:IdUsuario}
+        })
+
+        return res.status(200).json({
+            ok: true,
+            msg: "datos del certificados listos",
+            data: data[0], // solo los resultados
+        })
+    } catch (error) {
+        return res.status(500).json({
+            ok:false,
+            message:"cambios no efectuados correctamente"
+        }  ) 
+    }
+    
 }

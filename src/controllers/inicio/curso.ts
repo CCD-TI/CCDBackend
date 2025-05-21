@@ -1036,14 +1036,19 @@ export const getcursoHome = async (
   "cur"."IdCurso" AS "IdCurso",
   "cur"."Curso" AS "Curso",
   "tpo"."TipoCurso" AS "TipoCurso",
-  (
-    SELECT 
-      JSON_AGG(
-        CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo")
-      )
-    FROM "ProductoAdjunto" "pad"
-    WHERE "pad"."Curso_id" = "cur"."IdCurso"
-  ) AS "RutaImagen",
+(
+  SELECT 
+    JSON_AGG(
+      CONCAT('/', "pad"."Tipo1", '/', "pad"."Tipo2", '/', "pad"."Tipo3", '/', "pad"."Tipo4", '/', "pad"."NombreArchivo")
+      ORDER BY 
+        CASE 
+          WHEN "pad"."Tipo1" = 'Multimedia' AND "pad"."Tipo2" = 'Imagen' THEN 0
+          ELSE 1
+        END
+    )
+  FROM "ProductoAdjunto" "pad"
+  WHERE "pad"."Curso_id" = "cur"."IdCurso"
+) AS "RutaImagen",
   (
     SELECT COUNT(*) 
     FROM "ProductoTemario" 

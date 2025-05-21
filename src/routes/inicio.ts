@@ -200,7 +200,9 @@ import {
     ActualizarMembresiaYRegistroVenta,
     eliminarProductoStockYVenta,
     listarencuesta,
-    UpdateIntentos
+    UpdateIntentos,
+    obtenerSoloProgreso,
+    ObtenerCertificados
 } from '../controllers/inicio/producto';
 
 
@@ -976,6 +978,8 @@ router.post('/verificarCode',verificarCode)
 router.post('/actualizarClaveTemporal',emailRateLimiter4,actualizarClaveTemporal)
 router.post('/updatePassword',updatePassword)
 router.post('/VerificarCodePromo', VerificarCodePromo)
+router.post('/obtenerSoloProgreso', obtenerSoloProgreso)
+router.post('/ObtenerCertificados', ObtenerCertificados)
 
 /// Endpoints para la compra de Membresias
  
