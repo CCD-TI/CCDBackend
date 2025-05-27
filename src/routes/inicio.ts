@@ -202,7 +202,9 @@ import {
     listarencuesta,
     UpdateIntentos,
     obtenerSoloProgreso,
-    ObtenerCertificados
+    ObtenerCertificados,
+    DataCourse,
+    CreateEvaluaciones
 } from '../controllers/inicio/producto';
 
 
@@ -747,8 +749,6 @@ router.post('/guardar-archivosmodulos-admin', upload.none(), async (req: Request
     }
 });
 
-
-
 router.post('/ActualizarCursoOnline', async (req: Request, res: Response) => {
     try {   const db = getSiscardRevolution();
         // Obtener los datos del cuerpo de la solicitud
@@ -980,6 +980,9 @@ router.post('/updatePassword',updatePassword)
 router.post('/VerificarCodePromo', VerificarCodePromo)
 router.post('/obtenerSoloProgreso', obtenerSoloProgreso)
 router.post('/ObtenerCertificados', ObtenerCertificados)
+router.post('/DataCourse', DataCourse)
+router.post('/CreateEvaluaciones', CreateEvaluaciones)
+
 
 /// Endpoints para la compra de Membresias
  

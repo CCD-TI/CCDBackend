@@ -5722,6 +5722,69 @@ export const listartemariointrov2 = async (
         });
     }
 };
+// export const listardatoscertificadogenerarv2 = async (
+//     req = request,
+//     res = response
+// ) => {
+//     const { fproducto_id, fusuario_id } = req.body; // Añadimos 'Escuela' al body.
+
+//     const sql = `
+
+//     SELECT 
+//     AVG(evn."Nota") AS NotaFinal,
+//     cur."Curso" AS "Curso",
+//     cur."IdCurso",
+//     pta."HorasAcademicas",
+//     tpr."TipoCurso",
+//     cer."CodigoCertificado",
+//     json_agg(
+//         DISTINCT jsonb_build_object(
+//             'id', pt."IdProductoTemario",
+//             'nombre', pt."ProductoTemario",
+//             'numeracion', pt."Numeracion"
+//         )
+//     ) AS TemarioArray
+// FROM 
+//     "Producto" pro
+// INNER JOIN 
+//     "Curso" cur ON cur."IdCurso" = pro."Curso_id"
+// INNER JOIN 
+//     "ProductoTemario" pt ON pt."Curso_id" = cur."IdCurso"
+// INNER JOIN 
+//     "ProductoAtributo" pta ON pta."Curso_id" = cur."IdCurso"
+// INNER JOIN 
+//     "TipoCurso" tpr ON tpr."IdTipoCurso" = cur."TipoCurso_id"
+// INNER JOIN 
+//     "Evaluacion" ev ON ev."Curso_id" = pro."Curso_id"
+// INNER JOIN 
+//     "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
+// LEFT JOIN 
+//     "Certificado" cer ON cer."Producto_id" = pro."IdProducto"
+// WHERE 
+//     pro."IdProducto" = ${fproducto_id}
+//     AND evn."Usuario_id" = ${fusuario_id}   
+//     AND evn."Sala_id" IS NULL
+// GROUP BY 
+//     cur."Curso", cur."IdCurso", pta."HorasAcademicas", tpr."TipoCurso", cer."CodigoCertificado";
+
+//     `;
+
+//     try {
+//         const data = await db.query(sql, {
+//         });
+//         return res.status(200).json({
+//             ok: true,
+//             msg: "Especializaciones obtenidas correctamente",
+//             data: data[0],
+//         });
+//     } catch (err) {
+//         console.error(err);
+//         return res.status(400).json({
+//             ok: false,
+//             msg: "Error al obtener especializaciones",
+//         });
+//     }
+// };
 export const listardatoscertificadogenerarv2 = async (
     req = request,
     res = response
@@ -5730,13 +5793,13 @@ export const listardatoscertificadogenerarv2 = async (
 
     const sql = `
 
-    SELECT 
+      SELECT 
     AVG(evn."Nota") AS NotaFinal,
     cur."Curso" AS "Curso",
     cur."IdCurso",
     pta."HorasAcademicas",
     tpr."TipoCurso",
-    cer."CodigoCertificado",
+
     json_agg(
         DISTINCT jsonb_build_object(
             'id', pt."IdProductoTemario",
@@ -5757,15 +5820,13 @@ INNER JOIN
 INNER JOIN 
     "Evaluacion" ev ON ev."Curso_id" = pro."Curso_id"
 INNER JOIN 
-    "EvaluacionNota" evn ON evn."Evaluacion_id" = ev."IdEvaluacion"
-LEFT JOIN 
-    "Certificado" cer ON cer."Producto_id" = pro."IdProducto"
+    "EvaluacionNota" evn ON evn."Producto_id" = pro."IdProducto"
 WHERE 
     pro."IdProducto" = ${fproducto_id}
-    AND evn."Usuario_id" = ${fusuario_id}   
+    AND evn."Usuario_id" = ${fusuario_id} 
     AND evn."Sala_id" IS NULL
 GROUP BY 
-    cur."Curso", cur."IdCurso", pta."HorasAcademicas", tpr."TipoCurso", cer."CodigoCertificado";
+    cur."Curso", cur."IdCurso", pta."HorasAcademicas", tpr."TipoCurso";
 
     `;
 
@@ -6629,6 +6690,18 @@ export const guardarpreguntasadmin = async (req = request,
     }
 };
 
+//  (
+//       WITH NotasMaximas AS (
+//         SELECT
+//           MAX(en."Nota") AS "NotaMaxima"
+//         FROM "EvaluacionNota" en
+//         INNER JOIN "Evaluacion" ev ON ev."IdEvaluacion" = en."Evaluacion_id"
+//         WHERE en."Usuario_id" = ${fusuario_id} AND en."Producto_id" = ${fproducto_id}
+//         GROUP BY ev."Evaluacion"
+//       )
+//       SELECT COALESCE(ROUND(AVG("NotaMaxima")::numeric, 2), 0)
+//     ) AS "PromedioNotasMaximas", 
+
 export const listarcertificadoacreditaciones = async (
     req = request,
     res = response
@@ -6795,6 +6868,17 @@ SELECT
             'Sala', sa."Sala"
         )
     ) AS "Productos",
+     
+
+
+
+
+
+
+
+
+
+
     (
         SELECT JSON_AGG("RutaImagenPerfil")
         FROM "Usuario"
@@ -6931,6 +7015,7 @@ export const listarcertificadoacreditacionesvivo = async (
         SELECT COUNT(*)
         FROM "Encuesta"
     ) AS "ProgresoTotal",
+     
         JSON_AGG(
             JSON_BUILD_OBJECT(
                 'TipoModalidad', "tmo"."TipoModalidad",
@@ -10382,3 +10467,121 @@ export const ObtenerCertificados = async(req= request , res=response)=>{
     }
     
 }
+
+export const DataCourse = async(req=request , res= response)=>{
+   const {idusuario} = req.body
+
+    const sql = `
+SELECT 
+  cur."IdCurso",
+  STRING_AGG(DISTINCT pro."IdProducto"::text, ', ') AS "IdProductos",
+  STRING_AGG(DISTINCT ev."IdEvaluacion"::text, ', ') AS "IdEvaluaciones",
+  cur."Curso"
+FROM "Curso" cur
+INNER JOIN "Producto" pro ON pro."Curso_id" = cur."IdCurso"
+INNER JOIN "Evaluacion" ev ON ev."Curso_id" = cur."IdCurso"
+WHERE cur."Estado_id" = '1'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "EvaluacionNota" en
+    WHERE en."Producto_id" = pro."IdProducto" AND en."Usuario_id"= :useID
+  )
+GROUP BY cur."IdCurso", cur."Curso";
+
+
+
+    `
+
+    try {
+
+       const data:any = await db.query(sql, {
+           replacements :{
+           useID:idusuario
+           }
+        })
+            
+        return res.status(200).json({
+            ok:true,
+            message: "Evaluacion creada correctamente",
+            data: data[0]
+        })
+
+    } catch (error) {
+        return res.status(500).json({
+            ok:false,
+            message:"cambios no efectuados correctamente"
+        })
+    }
+
+
+
+}
+export const CreateEvaluaciones = async (req = request, res = response) => {
+  const {
+    IdUsuario,
+    IdProductoi,
+    evaluaciones = [], // <-- Espera un array con datos
+    UltimoUserMod,
+  } = req.body;
+
+  if (!Array.isArray(evaluaciones) || evaluaciones.length === 0) {
+    return res.status(400).json({
+      ok: false,
+      message: "Debe enviar al menos una evaluación.",
+    });
+  }
+
+  const sql = `
+    INSERT INTO "EvaluacionNota" (
+      "Usuario_id",
+      "Nota",
+      "Intento",
+      "FechaInicio",
+      "FechaFin",
+      "Evaluacion_id",
+      "Producto_id",
+      "Sala_id",
+      "Duracion",
+      "NumintentosRest",
+      "UltimoUserMod"
+    ) VALUES (
+      :IdUser,
+      :Nota,
+      1,
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP,
+      :IdEvaluacion,
+      :Productoid,
+      null,
+      60,
+      3,
+      :usermod
+    )
+  `;
+
+  try {
+    for (const evalItem of evaluaciones) {
+      await db.query(sql, {
+        replacements: {
+          IdUser: IdUsuario,
+          Nota: evalItem.Nota,
+          IdEvaluacion: evalItem.IdEvaluacion,
+          Productoid: IdProductoi,
+          usermod: UltimoUserMod,
+        },
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: "Evaluaciones creadas correctamente",
+    });
+  } catch (error) {
+    console.error("Error al insertar evaluaciones:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Ocurrió un error al insertar las evaluaciones.",
+    });
+  }
+};
+
