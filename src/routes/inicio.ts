@@ -204,7 +204,9 @@ import {
     obtenerSoloProgreso,
     ObtenerCertificados,
     DataCourse,
-    CreateEvaluaciones
+    CreateEvaluaciones,
+    Eliminarcertificado,
+    VerificarCertificadoExistente
 } from '../controllers/inicio/producto';
 
 
@@ -1005,13 +1007,15 @@ router.post('/SubirDocumentoUsuario', upload.single('inputFile'), SubirDocumento
 
 /// Pruebas cron
 
-router.post('/Cron', Cron)
+router.get('/Cron', Cron)
 router.post('/ObtenerFechaMembresia', ObtenerFechaMembresia)
 
 
 //endpoint Usuarios
 
 router.post('/UsuariosData', UsuariosData)
+router.post('/Eliminarcertificado', Eliminarcertificado)    
+router.post('/VerificarCertificadoExistente', VerificarCertificadoExistente)    
 
 //endpoint Adminstrador
 

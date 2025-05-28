@@ -1,43 +1,48 @@
-// api/cron-job.js
-
 import { config } from 'dotenv';
 import { request, response } from 'express';
 import db from "../../db/connection";
+import { QueryTypes } from 'sequelize';
 
-// Cargar las variables de entorno si las tienes en un archivo .env
 config();
 
-export default async function handler(_req = request, res = response) {
-
-
+export default async function cronjob(_req = request, res = response) {
   try {
-    
-    // Conectar a la base de datos
+    // Consultar membresías que expiran hoy
+    const membresias = await db.query(`
+      SELECT "IdMembresia", "UsuarioId"
+      FROM "membresias"
+      WHERE DATE("FechaExpiracion") = CURRENT_DATE AND "Status" = 1
+    `, { type: QueryTypes.SELECT }) as { IdMembresia: number; UsuarioId: number }[];
 
-    // Actualizar las membresías expiradas
-    await db.query(`
-      UPDATE "membresias"
-      SET "Status" = 0
-      WHERE "FechaExpiracion" < NOW() AND "Status" != 0;
-    `);
+    if (membresias.length === 0) {
+      return res.status(200).json({ message: "No hay membresías que expiren hoy." });
+    }
 
-    // Actualizar el estado de los productos en "producto_stock"
-    await db.query(`
-      UPDATE "ProductoStock"
-      SET "Membresia_Status" = 0
-      WHERE "Membresia_Id" IN (
-        SELECT "IdMembresia"
-        FROM "membresias"
-        WHERE "FechaExpiracion" < NOW() AND "Status" = 0
-      );
-    `);
+    // Actualizar membresías y usuarios
+    for (const { IdMembresia, UsuarioId } of membresias) {
+      await db.query(`
+        UPDATE "membresias"
+        SET "Status" = 0
+        WHERE "IdMembresia" = :id
+      `, {
+        replacements: { id: IdMembresia },
+        type: QueryTypes.UPDATE,
+      });
 
-    // Responder a la solicitud HTTP
-    res.status(200).json({ message: "Membresías y Producto Stock actualizados exitosamente." });
+      await db.query(`
+        UPDATE "Usuario"
+        SET "Premium" = 0
+        WHERE "IdUsuario" = :usuarioId
+      `, {
+        replacements: { usuarioId: UsuarioId },
+        type: QueryTypes.UPDATE,
+      });
+    }
+
+    res.status(200).json({ message: `${membresias.length} membresía(s) expiradas.` });
+
   } catch (error) {
-    console.error('Error al ejecutar el cron job:', error);
-    res.status(500).json({ error: "Error interno en el cron job" });
-  } finally {
-    // Cerrar la conexión a la base de datos
+    console.error('Error en cron job:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 }

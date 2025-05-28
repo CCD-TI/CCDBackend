@@ -10585,3 +10585,71 @@ export const CreateEvaluaciones = async (req = request, res = response) => {
   }
 };
 
+export const Eliminarcertificado = async(req=request, res=response)=>{
+    const {IdUsuario, IdProducto} = req.body
+
+    const sql = `
+    DELETE FROM "Certificado"
+    WHERE "Usuario_id" = :IdUsuario AND "Producto_id" = :IdProducto
+    `
+
+    try {
+        await db.query(sql,{
+            replacements:{
+                IdUsuario:IdUsuario,
+                IdProducto:IdProducto
+            }
+        })
+
+        return res.status(200).json({
+            ok:true,
+            message:"Certificado eliminado correctamente"
+        })
+    } catch (error) {
+        return res.status(500).json({
+            ok:false,
+            message:"cambios no efectuados correctamente"
+        })
+    }
+}
+
+
+export const VerificarCertificadoExistente = async(req = request, res = response) => {
+    const {IdUsuario, IdProducto} = req.body;
+    
+    const sql = `
+        SELECT COUNT(*) as existe 
+        FROM "Certificado"   
+        WHERE "Usuario_id" = :IdUsuario AND "Producto_id" = :IdProducto
+    `;
+    
+    try {
+        // 🔥 CAMBIO PRINCIPAL: Capturar el resultado de la consulta
+        const resultado:any = await db.query(sql, {
+            replacements: {
+                IdUsuario: IdUsuario,
+                IdProducto: IdProducto
+            },
+            type: "SELECT" // Asegurar que sea un SELECT
+        });
+
+        // 🔥 Extraer el count del resultado
+        const count = resultado[0].existe;
+        
+        // 🔥 Retornar la información al frontend
+        return res.status(200).json({
+            ok: true,
+            existe: count > 0,  // true si hay certificados, false si count = 0
+            total: count,       // número exacto
+            message: count > 0 ? "Certificado ya existe" : "No existe certificado"
+        });
+        
+    } catch (error) {
+        console.error("Error verificando certificado:", error);
+        return res.status(500).json({
+            ok: false,
+            existe: false, // En caso de error, asumir que no existe
+            message: "Error al verificar certificado"
+        });
+    }
+};
