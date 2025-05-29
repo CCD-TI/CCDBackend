@@ -10480,11 +10480,17 @@ SELECT
 FROM "Curso" cur
 INNER JOIN "Producto" pro ON pro."Curso_id" = cur."IdCurso"
 INNER JOIN "Evaluacion" ev ON ev."Curso_id" = cur."IdCurso"
+LEFT JOIN "ProductoStock" ps ON ps."Producto_id" = pro."IdProducto" AND ps."Usuario_id" = :useID
+LEFT JOIN "Usuario" u ON u."IdUsuario" = :useID
 WHERE cur."Estado_id" = '1'
+  AND (
+    (u."Premium" = 1) OR 
+    (u."Premium" = 0 AND ps."Producto_id" IS NOT NULL)
+  )
   AND NOT EXISTS (
     SELECT 1
     FROM "EvaluacionNota" en
-    WHERE en."Producto_id" = pro."IdProducto" AND en."Usuario_id"= :useID
+    WHERE en."Evaluacion_id" = ev."IdEvaluacion" AND en."Usuario_id" = :useID
   )
 GROUP BY cur."IdCurso", cur."Curso";
 
