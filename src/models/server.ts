@@ -8,6 +8,7 @@ import inicioRouth from "../routes/inicio";
 import authRouth from "../routes/auth";
 import pagoRouth from "../routes/pago";
 import storageRouth from "../routes/storage";
+import cronRouth from "../routes/cron"; 
 import bodyParser from "body-parser";
 import { getcursoHome } from "../controllers/inicio/curso";
 
@@ -21,6 +22,7 @@ class Server {
   //Variables de rutas
   private paths = {
     pago: "/pago",
+    cron: "/pago",
     storage: "/storage",
     inicio: "/inicio",
     auth: "/auth",
@@ -58,6 +60,7 @@ class Server {
     this.app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
     this.app.use(express.json());
     this.app.options('*', cors());
+    
 
     this.app.use((req, res, next) => {
       res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
@@ -72,7 +75,10 @@ class Server {
     this.app.use(this.paths.auth, authRouth);
     this.app.use(this.paths.pago, pagoRouth);
     this.app.use(this.paths.storage, storageRouth);
+    this.app.use(this.paths.cron, cronRouth);
+
   }
+  
   //Conexion a la base de datos
   async dbConnect() {
     try {
