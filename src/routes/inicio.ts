@@ -216,8 +216,8 @@ import { NOW } from 'sequelize';
 import { GuardarDatosExamen, listarcertificadosxusuario, listarcursosplataformaxusuario, listarevaluacionesxusuario, listarpreguntasxusuario } from '../controllers/plataforma/cursos';
 import { asignarxpago, getcursoHome, getcursoProfesional, getcursosavCarrusel, getRutas, getRutasDetalle, listaespecializacion, listaespecializacionGeneral, vercursosespecializacionescuela, vercursosespecializacionGeneral } from '../controllers/inicio/curso';
 import { actualizarEntidad, buscarCursosPorPalabra, escuelagetcursodetalle, frontgetcursodetalle, getcursodetalle, getcursoescuelaespecializacion, getcursosav, getcursosfull, getescuela } from '../controllers/inicio/curso';
-import Cron from '../controllers/cron/Cron';
-import { ObtenerFechaMembresia } from '../controllers/cron/Membresia';
+import Cron from '../controllers/api/Cron';
+import { ObtenerFechaMembresia } from '../controllers/api/Membresia';
 
 const rateLimit = require('express-rate-limit');
 

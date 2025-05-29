@@ -22,7 +22,7 @@ class Server {
   //Variables de rutas
   private paths = {
     pago: "/pago",
-    cron: "/pago",
+    cron: "/api",
     storage: "/storage",
     inicio: "/inicio",
     auth: "/auth",
