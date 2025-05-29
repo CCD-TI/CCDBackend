@@ -1,4 +1,4 @@
-import cronjob from '../../src/controllers/cron/Cron';
+import cronjob from '../src/controllers/cron/Cron';
 
 export default async function handler(req, res) {
   // Solo aceptar método GET (puedes cambiarlo si quieres)
