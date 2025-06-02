@@ -417,6 +417,8 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
         fArea,
         fPuesto,
         fDescripcion, fDireccion, UCuerpo, UPerfil } = req.body;
+        const fechaNacimiento = fFechaNac && fFechaNac !== '' ? new Date(fFechaNac) : null;
+
     const sql = `select count(*) from "Usuario" where "Usuario"='${fUsuario}'`;
 
     try {   const db = getSiscardRevolution();
@@ -455,7 +457,7 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
             if (fModo === 'Cliente') {
                 const sql2 = `Insert into "Entidad" ("Nombres","Apellidos","TipoDocumento_id","NroDocumento","Correo",
                 "Telefono","Ubigeo","Direccion","Genero","FcNacimiento") values ('${fNombres}','${fApellidos}',
-                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}','${fFechaNac}') RETURNING "IdEntidad"`;
+                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}',${fechaNacimiento}) RETURNING "IdEntidad"`;
                 const data2: any = await db.query(sql2, {});
 
 
