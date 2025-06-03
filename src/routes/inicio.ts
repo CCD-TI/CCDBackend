@@ -218,6 +218,7 @@ import { asignarxpago, getcursoHome, getcursoProfesional, getcursosavCarrusel, g
 import { actualizarEntidad, buscarCursosPorPalabra, escuelagetcursodetalle, frontgetcursodetalle, getcursodetalle, getcursoescuelaespecializacion, getcursosav, getcursosfull, getescuela } from '../controllers/inicio/curso';
 import Cron from '../controllers/api/Cron';
 import { ObtenerFechaMembresia } from '../controllers/api/Membresia';
+import dayjs from 'dayjs';
 
 const rateLimit = require('express-rate-limit');
 
@@ -417,7 +418,9 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
         fArea,
         fPuesto,
         fDescripcion, fDireccion, UCuerpo, UPerfil } = req.body;
-        const fechaNacimiento = fFechaNac && fFechaNac !== '' ? new Date(fFechaNac) : null;
+      const fechaNacimiento = fFechaNac && fFechaNac !== ''
+        ? dayjs(fFechaNac).format('YYYY-MM-DD')  // → '2000-06-15'
+        : null;
 
     const sql = `select count(*) from "Usuario" where "Usuario"='${fUsuario}'`;
 
@@ -457,7 +460,7 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
             if (fModo === 'Cliente') {
                 const sql2 = `Insert into "Entidad" ("Nombres","Apellidos","TipoDocumento_id","NroDocumento","Correo",
                 "Telefono","Ubigeo","Direccion","Genero","FcNacimiento") values ('${fNombres}','${fApellidos}',
-                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}',${fechaNacimiento}) RETURNING "IdEntidad"`;
+                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}','${fechaNacimiento}') RETURNING "IdEntidad"`;
                 const data2: any = await db.query(sql2, {});
 
 
