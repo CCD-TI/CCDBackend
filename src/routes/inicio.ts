@@ -440,7 +440,7 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
 
                 const sql2 = `Insert into "Entidad" ("Nombres","Apellidos","TipoDocumento_id","NroDocumento","Correo",
                 "Telefono","Ubigeo","Direccion","Genero","FcNacimiento") values ('${fNombres}','${fApellidos}',
-                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}','${fFechaNac}') RETURNING "IdEntidad"`;
+                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}',${fechaNacimiento ? `'${fechaNacimiento}'` : 'NULL'}) RETURNING "IdEntidad"`;
                 const data2: any = await db.query(sql2, {});
 
                 const sql1 = `Insert into "Empleado" ("Descripcion","CorreoCorporativo","TelefonoCorporativo","Area_id","Puesto_id","Entidad_id") values 
@@ -700,7 +700,7 @@ router.post('/guardar-archivosmodulos-admin', upload.none(), async (req: Request
         const archivos = JSON.parse(fileMetadata); // Convertir a array de objetos
 
         for (const archivo of archivos) {
-            const { tipo1, tipo2, tipo3, tipo4, name, abbreviation } = archivo;
+            const { tipo1, tipo2, tipo3, tipo4, name, abbreviation,IdnombreArchivo } = archivo;
             if (abbreviation == 'VideoPresentacion') {
                 const existe: any = await db.query(
                     `SELECT Count(*) FROM "ProductoIntroduccion"
@@ -739,10 +739,10 @@ router.post('/guardar-archivosmodulos-admin', upload.none(), async (req: Request
                     // Si no existe, hacer INSERT
                     await db.query(
                         `INSERT INTO "ProductoTemarioAdjunto"
-                    ("Tipo1", "Tipo2", "Tipo3", "Tipo4", "NombreArchivo", "ProductoTemario_id")
-                    VALUES (:tipo1, :tipo2, :tipo3, :tipo4, :name, :idproductotemario)`,
+                    ("Tipo1", "Tipo2", "Tipo3", "Tipo4", "NombreArchivo", "ProductoTemario_id","NombreFinal")
+                    VALUES (:tipo1, :tipo2, :tipo3, :tipo4, :name, :idproductotemario, :IdnombreArchivo)`,
                         {
-                            replacements: { tipo1, tipo2, tipo3, tipo4, name, idproductotemario },
+                            replacements: { tipo1, tipo2, tipo3, tipo4, name, idproductotemario , IdnombreArchivo },
                         }
                     );
                 }
