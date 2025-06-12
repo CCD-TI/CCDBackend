@@ -211,13 +211,14 @@ import {
 
 
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { DATE } from 'sequelize';
+import { DATE, QueryTypes } from 'sequelize';
 import { NOW } from 'sequelize';
 import { GuardarDatosExamen, listarcertificadosxusuario, listarcursosplataformaxusuario, listarevaluacionesxusuario, listarpreguntasxusuario } from '../controllers/plataforma/cursos';
 import { asignarxpago, getcursoHome, getcursoProfesional, getcursosavCarrusel, getRutas, getRutasDetalle, listaespecializacion, listaespecializacionGeneral, vercursosespecializacionescuela, vercursosespecializacionGeneral } from '../controllers/inicio/curso';
 import { actualizarEntidad, buscarCursosPorPalabra, escuelagetcursodetalle, frontgetcursodetalle, getcursodetalle, getcursoescuelaespecializacion, getcursosav, getcursosfull, getescuela } from '../controllers/inicio/curso';
 import Cron from '../controllers/api/Cron';
 import { ObtenerFechaMembresia } from '../controllers/api/Membresia';
+import dayjs from 'dayjs';
 
 const rateLimit = require('express-rate-limit');
 
@@ -417,7 +418,9 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
         fArea,
         fPuesto,
         fDescripcion, fDireccion, UCuerpo, UPerfil } = req.body;
-        const fechaNacimiento = fFechaNac && fFechaNac !== '' ? new Date(fFechaNac) : null;
+      const fechaNacimiento = fFechaNac && fFechaNac !== ''
+        ? dayjs(fFechaNac).format('YYYY-MM-DD')  // → '2000-06-15'
+        : null;
 
     const sql = `select count(*) from "Usuario" where "Usuario"='${fUsuario}'`;
 
@@ -437,7 +440,7 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
 
                 const sql2 = `Insert into "Entidad" ("Nombres","Apellidos","TipoDocumento_id","NroDocumento","Correo",
                 "Telefono","Ubigeo","Direccion","Genero","FcNacimiento") values ('${fNombres}','${fApellidos}',
-                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}','${fFechaNac}') RETURNING "IdEntidad"`;
+                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}',${fechaNacimiento ? `'${fechaNacimiento}'` : 'NULL'}) RETURNING "IdEntidad"`;
                 const data2: any = await db.query(sql2, {});
 
                 const sql1 = `Insert into "Empleado" ("Descripcion","CorreoCorporativo","TelefonoCorporativo","Area_id","Puesto_id","Entidad_id") values 
@@ -457,7 +460,7 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
             if (fModo === 'Cliente') {
                 const sql2 = `Insert into "Entidad" ("Nombres","Apellidos","TipoDocumento_id","NroDocumento","Correo",
                 "Telefono","Ubigeo","Direccion","Genero","FcNacimiento") values ('${fNombres}','${fApellidos}',
-                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}',${fechaNacimiento}) RETURNING "IdEntidad"`;
+                ${fTipoDocumento},'${fNroDocumento}','${fCorreo}','${fTelefono}','010101','${fDireccion}','${fGenero}','${fechaNacimiento}') RETURNING "IdEntidad"`;
                 const data2: any = await db.query(sql2, {});
 
 
@@ -692,63 +695,81 @@ router.post('/guardar-atributos-admin', upload.none(), async (req: Request, res:
     }
 });
 router.post('/guardar-archivosmodulos-admin', upload.none(), async (req: Request, res: Response) => {
-    try {   const db = getSiscardRevolution();
+    try {
+        const db = getSiscardRevolution();
         const { fileMetadata, idproductotemario, idcurso } = req.body;
         const archivos = JSON.parse(fileMetadata); // Convertir a array de objetos
 
         for (const archivo of archivos) {
-            const { tipo1, tipo2, tipo3, tipo4, name, abbreviation } = archivo;
+            const { tipo1, tipo2, tipo3, tipo4, name, abbreviation, IdnombreArchivo } = archivo;
+            
             if (abbreviation == 'VideoPresentacion') {
                 const existe: any = await db.query(
-                    `SELECT Count(*) FROM "ProductoIntroduccion"
-                WHERE "Tipo1" = :tipo1 AND "Tipo2" = :tipo2 AND "Tipo3" = :tipo3 AND "Tipo4" = :tipo4
-                AND "NombreArchivo" = :name AND "Curso_id" = :idcurso`,
+                    `SELECT COUNT(*) as total FROM "ProductoIntroduccion"
+                    WHERE "Tipo1" = $1 AND "Tipo2" = $2 AND "Tipo3" = $3 AND "Tipo4" = $4
+                    AND "NombreArchivo" = $5 AND "Curso_id" = $6`,
                     {
-                        replacements: { tipo1, tipo2, tipo3, tipo4, name, idcurso },
+                        bind: [tipo1, tipo2, tipo3, tipo4, name, idcurso],
+                        type: QueryTypes.SELECT
                     }
                 );
-                if (existe[0][0].count > 0) {
-
+                
+                // En PostgreSQL con Sequelize, el resultado es existe[0].total
+                const count = parseInt(existe[0].total);
+                console.log(`Verificando VideoPresentacion ${name}: ${count} registros encontrados`);
+                
+                if (count > 0) {
+                    console.log(`El archivo ${name} ya existe en ProductoIntroduccion. Omitiendo inserción.`);
                 } else {
                     // Si no existe, hacer INSERT
                     await db.query(
                         `INSERT INTO "ProductoIntroduccion"
-                    ("Tipo1", "Tipo2", "Tipo3", "Tipo4", "NombreArchivo", "Curso_id")
-                    VALUES (:tipo1, :tipo2, :tipo3, :tipo4, :name, :idcurso)`,
+                        ("Tipo1", "Tipo2", "Tipo3", "Tipo4", "NombreArchivo", "Curso_id")
+                        VALUES ($1, $2, $3, $4, $5, $6)`,
                         {
-                            replacements: { tipo1, tipo2, tipo3, tipo4, name, idcurso },
+                            bind: [tipo1, tipo2, tipo3, tipo4, name, idcurso],
+                            type: QueryTypes.INSERT
                         }
                     );
+                    console.log(`Archivo ${name} insertado exitosamente en ProductoIntroduccion`);
                 }
             } else {
                 // Verificar si el archivo ya existe en la base de datos
                 const existe: any = await db.query(
-                    `SELECT Count(*) FROM "ProductoTemarioAdjunto"
-                WHERE "Tipo1" = :tipo1 AND "Tipo2" = :tipo2 AND "Tipo3" = :tipo3 AND "Tipo4" = :tipo4
-                AND "NombreArchivo" = :name AND "ProductoTemario_id" = :idproductotemario`,
+                    `SELECT COUNT(*) as total FROM "ProductoTemarioAdjunto"
+                    WHERE "Tipo1" = $1 AND "Tipo2" = $2 AND "Tipo3" = $3 AND "Tipo4" = $4
+                    AND "NombreArchivo" = $5 AND "ProductoTemario_id" = $6 AND "NombreFinal" = $7`,
                     {
-                        replacements: { tipo1, tipo2, tipo3, tipo4, name, idproductotemario },
+                        bind: [tipo1, tipo2, tipo3, tipo4, name, idproductotemario, IdnombreArchivo],
+                        type: QueryTypes.SELECT
                     }
                 );
-                if (existe[0][0].count > 0) {
-
+                
+                // En PostgreSQL con Sequelize, el resultado es existe[0].total
+                const count = parseInt(existe[0].total);
+                console.log(`Verificando archivo ${name}: ${count} registros encontrados`);
+                
+                if (count > 0) {
+                    console.log(`El archivo ${name} ya existe en ProductoTemarioAdjunto. Omitiendo inserción.`);
                 } else {
                     // Si no existe, hacer INSERT
                     await db.query(
                         `INSERT INTO "ProductoTemarioAdjunto"
-                    ("Tipo1", "Tipo2", "Tipo3", "Tipo4", "NombreArchivo", "ProductoTemario_id")
-                    VALUES (:tipo1, :tipo2, :tipo3, :tipo4, :name, :idproductotemario)`,
+                        ("Tipo1", "Tipo2", "Tipo3", "Tipo4", "NombreArchivo", "ProductoTemario_id", "NombreFinal")
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
                         {
-                            replacements: { tipo1, tipo2, tipo3, tipo4, name, idproductotemario },
+                            bind: [tipo1, tipo2, tipo3, tipo4, name, idproductotemario, IdnombreArchivo],
+                            type: QueryTypes.INSERT
                         }
                     );
+                    console.log(`Archivo ${name} insertado exitosamente en ProductoTemarioAdjunto`);
                 }
             }
         }
 
         res.status(200).json({ ok: true, msg: "Proceso completado con éxito" });
     } catch (err) {
-        console.error(err);
+        console.error('Error detallado:', err);
         res.status(500).json({ ok: false, msg: "Error en el proceso" });
     }
 });
