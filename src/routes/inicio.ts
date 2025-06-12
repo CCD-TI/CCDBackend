@@ -421,7 +421,7 @@ router.post('/crearUsuarioAdmin', upload.none(), async (req: Request, res: Respo
 
     const sql = `select count(*) from "Usuario" where "Usuario"='${fUsuario}'`;
 
-    try {   const db = getSiscardRevolution();
+    try {   
         // Ejecutar la consulta SQL directamente usando sequelize.query
         const data: any = await db.query(sql, {});
         if (data[0][0].count == 1) {

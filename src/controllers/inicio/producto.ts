@@ -4567,7 +4567,7 @@ export const listarencuestasalumnoobligatoriov2 = async (
     SELECT (select Count(*) from "EncuestaRespondida" er
     where "Usuario_id"=${fusuario_id} and er."Encuesta_id"=ec."IdEncuesta" and er."Producto_id"=${fproducto_id}) as "Respondida",(select Count(*) from "EncuestaPregunta" ep
     where ep."Encuesta_id"=ec."IdEncuesta") as "Preguntas",* FROM "Encuesta" ec
-    where "Obligatorio"=1 
+    where "Obligatorio"=1  AND "Estado_id" = '1'
     `;
 
     try {
